@@ -27,12 +27,11 @@ impl WikiResource {
     ///
     /// # Exemplo
     /// ```rust,ignore
-    /// let pages = client.wiki.list(1)?;
+    /// let pages = client.wiki.list(1).await?;
     /// ```
-    #[must_use]
-    pub fn list(&self, project_id: RedmineId) -> Result<Vec<WikiPageSummary>, RedmineError> {
+    pub async fn list(&self, project_id: RedmineId) -> Result<Vec<WikiPageSummary>, RedmineError> {
         let path = format!("/projects/{}/wiki/index.json", project_id);
-        let (items, _total) = self.http.get_paginated(&path, "wiki_pages", None, &[], "wiki.list")?;
+        let (items, _total) = self.http.get_paginated(&path, "wiki_pages", None, &[], "wiki.list").await?;
         Ok(items)
     }
 
@@ -45,16 +44,15 @@ impl WikiResource {
     ///
     /// # Exemplo
     /// ```rust,ignore
-    /// let page = client.wiki.get(1, "PáginaInicial", Some(&["attachments"]))?;
+    /// let page = client.wiki.get(1, "PáginaInicial", Some(&["attachments"])).await?;
     /// ```
-    #[must_use]
-    pub fn get(&self, project_id: RedmineId, title: &str, includes: Option<&[&str]>) -> Result<WikiPage, RedmineError> {
+    pub async fn get(&self, project_id: RedmineId, title: &str, includes: Option<&[&str]>) -> Result<WikiPage, RedmineError> {
         let path = format!("/projects/{}/wiki/{}.json", project_id, title);
         let mut query = Vec::new();
         if let Some(inc) = includes {
             query.push(("include", inc.join(",")));
         }
-        self.http.get_single(&path, "wiki_page", &query, "wiki.get")
+        self.http.get_single(&path, "wiki_page", &query, "wiki.get").await
     }
 
     /// Retorna uma versão específica de uma página wiki.
@@ -66,12 +64,11 @@ impl WikiResource {
     ///
     /// # Exemplo
     /// ```rust,ignore
-    /// let page = client.wiki.get_version(1, "PáginaInicial", 3)?;
+    /// let page = client.wiki.get_version(1, "PáginaInicial", 3).await?;
     /// ```
-    #[must_use]
-    pub fn get_version(&self, project_id: RedmineId, title: &str, version: u32) -> Result<WikiPage, RedmineError> {
+    pub async fn get_version(&self, project_id: RedmineId, title: &str, version: u32) -> Result<WikiPage, RedmineError> {
         let path = format!("/projects/{}/wiki/{}/{}.json", project_id, title, version);
-        self.http.get_single(&path, "wiki_page", &[], "wiki.get_version")
+        self.http.get_single(&path, "wiki_page", &[], "wiki.get_version").await
     }
 
     /// Cria ou atualiza uma página wiki.
@@ -86,13 +83,12 @@ impl WikiResource {
     /// # Exemplo
     /// ```rust,ignore
     /// let payload = CreateWikiPagePayload { text: "Novo conteúdo".into(), ..Default::default() };
-    /// client.wiki.create_or_update(1, "PáginaInicial", &payload)?;
+    /// client.wiki.create_or_update(1, "PáginaInicial", &payload).await?;
     /// ```
-    #[must_use]
-    pub fn create_or_update(&self, project_id: RedmineId, title: &str, payload: &CreateWikiPagePayload) -> Result<(), RedmineError> {
+    pub async fn create_or_update(&self, project_id: RedmineId, title: &str, payload: &CreateWikiPagePayload) -> Result<(), RedmineError> {
         let path = format!("/projects/{}/wiki/{}.json", project_id, title);
         let body = serde_json::json!({ "wiki_page": payload });
-        self.http.put::<serde_json::Value, _>(&path, &body, "wiki.create_or_update")?;
+        self.http.put::<serde_json::Value, _>(&path, &body, "wiki.create_or_update").await?;
         Ok(())
     }
 
@@ -104,11 +100,10 @@ impl WikiResource {
     ///
     /// # Exemplo
     /// ```rust,ignore
-    /// client.wiki.delete(1, "PáginaAntiga")?;
+    /// client.wiki.delete(1, "PáginaAntiga").await?;
     /// ```
-    #[must_use]
-    pub fn delete(&self, project_id: RedmineId, title: &str) -> Result<(), RedmineError> {
+    pub async fn delete(&self, project_id: RedmineId, title: &str) -> Result<(), RedmineError> {
         let path = format!("/projects/{}/wiki/{}.json", project_id, title);
-        self.http.delete(&path, &[], "wiki.delete")
+        self.http.delete(&path, &[], "wiki.delete").await
     }
 }

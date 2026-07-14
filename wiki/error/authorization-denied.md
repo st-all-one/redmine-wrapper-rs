@@ -2,11 +2,11 @@
 
 **Categoria:** `ErrorCategory::AuthorizationDenied`
 **HTTP Status:** 403
-**Gatilho:** Usuário não tem permissão para o recurso
+**Gatilho:** Acesso negado ao recurso
 
 ## Causa
 
-O usuário autenticado não possui o papel ou permissão necessária.
+O token autenticado não tem permissão para acessar o recurso solicitado.
 
 ## Exemplo
 
@@ -21,4 +21,4 @@ match result {
 
 ## Prevenção
 
-Verifique as permissões do usuário no projeto. Consulte `GET /roles/{id}.json` para lista de permissões disponíveis.
+Verifique as permissões do usuário no Redmine. Alguns recursos (ex: `users.list`, `groups.list`) requerem permissão de administrador.

@@ -28,13 +28,12 @@ impl TimeEntriesResource {
     ///
     /// # Exemplo
     /// ```rust,ignore
-    /// let entries = client.time_entries.list(None)?;
+    /// let entries = client.time_entries.list(None).await?;
     /// ```
-    #[must_use]
-    pub fn list(&self, filter: Option<&TimeEntryFilter>) -> Result<Vec<TimeEntry>, RedmineError> {
+    pub async fn list(&self, filter: Option<&TimeEntryFilter>) -> Result<Vec<TimeEntry>, RedmineError> {
         let base = filter_to_query(filter);
         let query: Vec<(&str, String)> = base.iter().map(|(k, v)| (k.as_str(), v.clone())).collect();
-        self.http.get_all_paginated("/time_entries.json", "time_entries", &query, "time_entries.list")
+        self.http.get_all_paginated("/time_entries.json", "time_entries", &query, "time_entries.list").await
     }
 
     /// Retorna um apontamento de horas pelo ID.
@@ -44,12 +43,11 @@ impl TimeEntriesResource {
     ///
     /// # Exemplo
     /// ```rust,ignore
-    /// let entry = client.time_entries.get(1)?;
+    /// let entry = client.time_entries.get(1).await?;
     /// ```
-    #[must_use]
-    pub fn get(&self, id: RedmineId) -> Result<TimeEntry, RedmineError> {
+    pub async fn get(&self, id: RedmineId) -> Result<TimeEntry, RedmineError> {
         let path = format!("/time_entries/{}.json", id);
-        self.http.get_single(&path, "time_entry", &[], "time_entries.get")
+        self.http.get_single(&path, "time_entry", &[], "time_entries.get").await
     }
 
     /// Cria um novo apontamento de horas.
@@ -60,12 +58,11 @@ impl TimeEntriesResource {
     /// # Exemplo
     /// ```rust,ignore
     /// let payload = CreateTimeEntryPayload { issue_id: Some(42), hours: 2.5, ..Default::default() };
-    /// let entry = client.time_entries.create(&payload)?;
+    /// let entry = client.time_entries.create(&payload).await?;
     /// ```
-    #[must_use]
-    pub fn create(&self, payload: &CreateTimeEntryPayload) -> Result<TimeEntry, RedmineError> {
+    pub async fn create(&self, payload: &CreateTimeEntryPayload) -> Result<TimeEntry, RedmineError> {
         let body = serde_json::json!({ "time_entry": payload });
-        self.http.post_single("/time_entries.json", "time_entry", &body, "time_entries.create")
+        self.http.post_single("/time_entries.json", "time_entry", &body, "time_entries.create").await
     }
 
     /// Atualiza um apontamento de horas existente.
@@ -77,13 +74,12 @@ impl TimeEntriesResource {
     /// # Exemplo
     /// ```rust,ignore
     /// let payload = UpdateTimeEntryPayload { hours: Some(3.0), ..Default::default() };
-    /// client.time_entries.update(1, &payload)?;
+    /// client.time_entries.update(1, &payload).await?;
     /// ```
-    #[must_use]
-    pub fn update(&self, id: RedmineId, payload: &UpdateTimeEntryPayload) -> Result<(), RedmineError> {
+    pub async fn update(&self, id: RedmineId, payload: &UpdateTimeEntryPayload) -> Result<(), RedmineError> {
         let path = format!("/time_entries/{}.json", id);
         let body = serde_json::json!({ "time_entry": payload });
-        self.http.put::<serde_json::Value, _>(&path, &body, "time_entries.update")?;
+        self.http.put::<serde_json::Value, _>(&path, &body, "time_entries.update").await?;
         Ok(())
     }
 
@@ -94,11 +90,10 @@ impl TimeEntriesResource {
     ///
     /// # Exemplo
     /// ```rust,ignore
-    /// client.time_entries.delete(1)?;
+    /// client.time_entries.delete(1).await?;
     /// ```
-    #[must_use]
-    pub fn delete(&self, id: RedmineId) -> Result<(), RedmineError> {
+    pub async fn delete(&self, id: RedmineId) -> Result<(), RedmineError> {
         let path = format!("/time_entries/{}.json", id);
-        self.http.delete(&path, &[], "time_entries.delete")
+        self.http.delete(&path, &[], "time_entries.delete").await
     }
 }

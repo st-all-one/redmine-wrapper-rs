@@ -2,11 +2,11 @@
 
 **Categoria:** `ErrorCategory::UploadTooLarge`
 **HTTP Status:** 413
-**Gatilho:** Arquivo excede tamanho máximo
+**Gatilho:** Arquivo excede tamanho máximo permitido
 
 ## Causa
 
-O arquivo enviado excede o limite configurado no servidor Redmine.
+O arquivo enviado excede o limite configurado no servidor Redmine (geralmente 5MB por padrão).
 
 ## Exemplo
 
@@ -21,4 +21,4 @@ match result {
 
 ## Prevenção
 
-Verifique o limite de upload no servidor (Administração → Configurações → Anexos). Compacte ou divida o arquivo.
+Verifique o limite de upload no servidor Redmine (Administração → Configurações → Anexos). Comprima ou divida o arquivo.

@@ -34,9 +34,9 @@ Todo erro `RedmineError::Api` contém:
 ## Tratamento Genérico
 
 ```rust,ignore
-use redmine_wrapper::{RedmineClient, RedmineError, ErrorCategory};
+use redmine_wrapper::core::errors::{RedmineError, ErrorCategory};
 
-fn safe_call<T>(result: Result<T, RedmineError>) -> Option<T> {
+async fn safe_call<T>(result: Result<T, RedmineError>) -> Option<T> {
     match result {
         Ok(val) => Some(val),
         Err(RedmineError::Api { category, detail, instance, .. }) => {
@@ -59,7 +59,7 @@ gerado no momento do erro. Use este UUID para correlacionar logs:
 ```rust,ignore
 match result {
     Err(RedmineError::Api { instance, .. }) => {
-        log::error!("Erro Redmine (correlation_id: {})", instance);
+        tracing::error!("Erro Redmine (correlation_id: {})", instance);
     }
     _ => {}
 }

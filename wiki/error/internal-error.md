@@ -1,19 +1,22 @@
 # Internal Error
 
 **Categoria:** `ErrorCategory::InternalError`
-**HTTP Status:** 500
+**HTTP Status:** 500 (interno)
 **Gatilho:** Erro interno não categorizado
 
 ## Causa
 
-Código HTTP sem mapeamento para uma categoria específica.
+Erro HTTP 500 sem categoria específica mapeada pelo wrapper.
 
 ## Exemplo
 
 ```rust,ignore
 match result {
-    Err(RedmineError::Api { category: ErrorCategory::InternalError, detail, instance, .. }) => {
-        eprintln!("{detail} (correlation: {instance})");
+    Err(RedmineError::Api { category: ErrorCategory::InternalError, detail, instance, context, .. }) => {
+        eprintln!("Erro interno do servidor: {detail}");
+        if let Some(body) = context.response_body {
+            eprintln!("Corpo: {body}");
+        }
     }
     _ => {}
 }
@@ -21,4 +24,4 @@ match result {
 
 ## Prevenção
 
-Consulte o código HTTP e o corpo da resposta para diagnóstico. Reporte ao administrador do Redmine se persistir.
+Verifique os logs do servidor Redmine para identificar a causa. Pode ser um bug no servidor ou uma configuração incorreta.

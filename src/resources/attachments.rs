@@ -29,12 +29,11 @@ impl AttachmentsResource {
     ///
     /// # Exemplo
     /// ```rust,ignore
-    /// let attachment = client.attachments.get(5)?;
+    /// let attachment = client.attachments.get(5).await?;
     /// ```
-    #[must_use]
-    pub fn get(&self, id: RedmineId) -> Result<Attachment, RedmineError> {
+    pub async fn get(&self, id: RedmineId) -> Result<Attachment, RedmineError> {
         let path = format!("/attachments/{}.json", id);
-        self.http.get_single(&path, "attachment", &[], "attachments.get")
+        self.http.get_single(&path, "attachment", &[], "attachments.get").await
     }
 
     /// Exclui um anexo.
@@ -44,12 +43,11 @@ impl AttachmentsResource {
     ///
     /// # Exemplo
     /// ```rust,ignore
-    /// client.attachments.delete(5)?;
+    /// client.attachments.delete(5).await?;
     /// ```
-    #[must_use]
-    pub fn delete(&self, id: RedmineId) -> Result<(), RedmineError> {
+    pub async fn delete(&self, id: RedmineId) -> Result<(), RedmineError> {
         let path = format!("/attachments/{}.json", id);
-        self.http.delete(&path, &[], "attachments.delete")
+        self.http.delete(&path, &[], "attachments.delete").await
     }
 
     /// Faz upload de um arquivo e retorna o token para uso posterior.
@@ -65,12 +63,11 @@ impl AttachmentsResource {
     ///
     /// # Exemplo
     /// ```rust,ignore
-    /// let token = client.attachments.upload("foto.png", &bytes)?;
+    /// let token = client.attachments.upload("foto.png", &bytes).await?;
     /// ```
-    #[must_use]
-    pub fn upload(&self, filename: &str, data: &[u8]) -> Result<String, RedmineError> {
+    pub async fn upload(&self, filename: &str, data: &[u8]) -> Result<String, RedmineError> {
         let path = format!("/uploads.json?filename={}", filename);
-        let result: UploadTokenResponse = self.http.post_binary(&path, data, "application/octet-stream", "attachments.upload")?;
+        let result: UploadTokenResponse = self.http.post_binary(&path, data, "application/octet-stream", "attachments.upload").await?;
         Ok(result.upload.token)
     }
 }

@@ -23,11 +23,10 @@ impl EnumerationsResource {
     ///
     /// # Exemplo
     /// ```rust,ignore
-    /// let priorities = client.enumerations.list_issue_priorities()?;
+    /// let priorities = client.enumerations.list_issue_priorities().await?;
     /// ```
-    #[must_use]
-    pub fn list_issue_priorities(&self) -> Result<Vec<IssuePriority>, RedmineError> {
-        let (items, _total) = self.http.get_paginated("/enumerations/issue_priorities.json", "issue_priorities", None, &[], "enumerations.list_issue_priorities")?;
+    pub async fn list_issue_priorities(&self) -> Result<Vec<IssuePriority>, RedmineError> {
+        let (items, _total) = self.http.get_paginated("/enumerations/issue_priorities.json", "issue_priorities", None, &[], "enumerations.list_issue_priorities").await?;
         Ok(items)
     }
 
@@ -35,11 +34,10 @@ impl EnumerationsResource {
     ///
     /// # Exemplo
     /// ```rust,ignore
-    /// let activities = client.enumerations.list_time_entry_activities()?;
+    /// let activities = client.enumerations.list_time_entry_activities().await?;
     /// ```
-    #[must_use]
-    pub fn list_time_entry_activities(&self) -> Result<Vec<TimeEntryActivity>, RedmineError> {
-        let (items, _total) = self.http.get_paginated("/enumerations/time_entry_activities.json", "time_entry_activities", None, &[], "enumerations.list_time_entry_activities")?;
+    pub async fn list_time_entry_activities(&self) -> Result<Vec<TimeEntryActivity>, RedmineError> {
+        let (items, _total) = self.http.get_paginated("/enumerations/time_entry_activities.json", "time_entry_activities", None, &[], "enumerations.list_time_entry_activities").await?;
         Ok(items)
     }
 
@@ -47,11 +45,10 @@ impl EnumerationsResource {
     ///
     /// # Exemplo
     /// ```rust,ignore
-    /// let categories = client.enumerations.list_document_categories()?;
+    /// let categories = client.enumerations.list_document_categories().await?;
     /// ```
-    #[must_use]
-    pub fn list_document_categories(&self) -> Result<Vec<DocumentCategory>, RedmineError> {
-        let (items, _total) = self.http.get_paginated("/enumerations/document_categories.json", "document_categories", None, &[], "enumerations.list_document_categories")?;
+    pub async fn list_document_categories(&self) -> Result<Vec<DocumentCategory>, RedmineError> {
+        let (items, _total) = self.http.get_paginated("/enumerations/document_categories.json", "document_categories", None, &[], "enumerations.list_document_categories").await?;
         Ok(items)
     }
 }

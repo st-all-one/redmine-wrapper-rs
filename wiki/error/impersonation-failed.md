@@ -2,11 +2,11 @@
 
 **Categoria:** `ErrorCategory::ImpersonationFailed`
 **HTTP Status:** 412
-**Gatilho:** Impersonação inválida
+**Gatilho:** `X-Redmine-Switch-User` inválido
 
 ## Causa
 
-O header `X-Redmine-Switch-User` especifica um login de usuário inexistente ou inativo.
+O header `X-Redmine-Switch-User` foi enviado com um login de usuário que não existe no Redmine.
 
 ## Exemplo
 
@@ -21,4 +21,4 @@ match result {
 
 ## Prevenção
 
-Verifique se o login informado existe e está ativo no Redmine.
+Verifique se o login informado em `switch_user` existe no Redmine e se o token usado é de um administrador.

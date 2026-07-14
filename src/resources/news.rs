@@ -24,11 +24,10 @@ impl NewsResource {
     ///
     /// # Exemplo
     /// ```rust,ignore
-    /// let all_news = client.news.list()?;
+    /// let all_news = client.news.list().await?;
     /// ```
-    #[must_use]
-    pub fn list(&self) -> Result<Vec<News>, RedmineError> {
-        let (items, _total) = self.http.get_paginated("/news.json", "news", None, &[], "news.list")?;
+    pub async fn list(&self) -> Result<Vec<News>, RedmineError> {
+        let (items, _total) = self.http.get_paginated("/news.json", "news", None, &[], "news.list").await?;
         Ok(items)
     }
 
@@ -39,12 +38,11 @@ impl NewsResource {
     ///
     /// # Exemplo
     /// ```rust,ignore
-    /// let project_news = client.news.list_by_project(1)?;
+    /// let project_news = client.news.list_by_project(1).await?;
     /// ```
-    #[must_use]
-    pub fn list_by_project(&self, project_id: RedmineId) -> Result<Vec<News>, RedmineError> {
+    pub async fn list_by_project(&self, project_id: RedmineId) -> Result<Vec<News>, RedmineError> {
         let path = format!("/projects/{}/news.json", project_id);
-        let (items, _total) = self.http.get_paginated(&path, "news", None, &[], "news.list_by_project")?;
+        let (items, _total) = self.http.get_paginated(&path, "news", None, &[], "news.list_by_project").await?;
         Ok(items)
     }
 
@@ -55,12 +53,11 @@ impl NewsResource {
     ///
     /// # Exemplo
     /// ```rust,ignore
-    /// let news = client.news.get(8)?;
+    /// let news = client.news.get(8).await?;
     /// ```
-    #[must_use]
-    pub fn get(&self, id: RedmineId) -> Result<News, RedmineError> {
+    pub async fn get(&self, id: RedmineId) -> Result<News, RedmineError> {
         let path = format!("/news/{}.json", id);
-        self.http.get_single(&path, "news", &[], "news.get")
+        self.http.get_single(&path, "news", &[], "news.get").await
     }
 
     /// Cria uma notícia em um projeto.
@@ -72,13 +69,12 @@ impl NewsResource {
     /// # Exemplo
     /// ```rust,ignore
     /// let payload = CreateNewsPayload { title: "Novidade".into(), summary: "Resumo".into(), ..Default::default() };
-    /// let news = client.news.create(1, &payload)?;
+    /// let news = client.news.create(1, &payload).await?;
     /// ```
-    #[must_use]
-    pub fn create(&self, project_id: RedmineId, payload: &CreateNewsPayload) -> Result<News, RedmineError> {
+    pub async fn create(&self, project_id: RedmineId, payload: &CreateNewsPayload) -> Result<News, RedmineError> {
         let path = format!("/projects/{}/news.json", project_id);
         let body = serde_json::json!({ "news": payload });
-        self.http.post_single(&path, "news", &body, "news.create")
+        self.http.post_single(&path, "news", &body, "news.create").await
     }
 
     /// Atualiza uma notícia.
@@ -90,13 +86,12 @@ impl NewsResource {
     /// # Exemplo
     /// ```rust,ignore
     /// let payload = UpdateNewsPayload { title: Some("Título Atualizado".into()), ..Default::default() };
-    /// client.news.update(8, &payload)?;
+    /// client.news.update(8, &payload).await?;
     /// ```
-    #[must_use]
-    pub fn update(&self, id: RedmineId, payload: &UpdateNewsPayload) -> Result<(), RedmineError> {
+    pub async fn update(&self, id: RedmineId, payload: &UpdateNewsPayload) -> Result<(), RedmineError> {
         let path = format!("/news/{}.json", id);
         let body = serde_json::json!({ "news": payload });
-        self.http.put::<serde_json::Value, _>(&path, &body, "news.update")?;
+        self.http.put::<serde_json::Value, _>(&path, &body, "news.update").await?;
         Ok(())
     }
 
@@ -107,11 +102,10 @@ impl NewsResource {
     ///
     /// # Exemplo
     /// ```rust,ignore
-    /// client.news.delete(8)?;
+    /// client.news.delete(8).await?;
     /// ```
-    #[must_use]
-    pub fn delete(&self, id: RedmineId) -> Result<(), RedmineError> {
+    pub async fn delete(&self, id: RedmineId) -> Result<(), RedmineError> {
         let path = format!("/news/{}.json", id);
-        self.http.delete(&path, &[], "news.delete")
+        self.http.delete(&path, &[], "news.delete").await
     }
 }

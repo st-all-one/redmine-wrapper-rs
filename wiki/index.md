@@ -1,8 +1,8 @@
 # redmine-wrapper-rs — Documentação
 
-Wrapper Rust tipado para a API REST do Redmine, construído em Rust síncrono (blocking)
-com foco em segurança, rastreabilidade via UUID v7 e cobertura completa de todos os 86
-endpoints da API.
+Wrapper Rust tipado para a API REST do Redmine, construído em Rust assíncrono
+(async) com tokio/reqwest, foco em segurança, rastreabilidade via UUID v7 e
+cobertura completa de todos os 86 endpoints da API.
 
 ## Índice
 
@@ -16,10 +16,10 @@ endpoints da API.
 ## Exemplo Rápido
 
 ```rust,ignore
-use redmine_wrapper::RedmineClient;
-use redmine_wrapper::RedmineConfigBuilder;
+use redmine_wrapper::{RedmineClient, RedmineConfigBuilder};
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let client = RedmineClient::new(
         RedmineConfigBuilder::default()
             .base_url("https://redmine.exemplo.com")
@@ -27,7 +27,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             .build()?,
     )?;
 
-    let projetos = client.projects.list()?;
+    let projetos = client.projects.list().await?;
     for p in &projetos {
         println!("#{}: {} ({})", p.id, p.name.as_deref().unwrap_or("?"), p.identifier.as_deref().unwrap_or("?"));
     }

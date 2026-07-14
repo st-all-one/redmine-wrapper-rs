@@ -28,14 +28,13 @@ impl UsersResource {
     ///
     /// # Exemplo
     /// ```rust,ignore
-    /// let users = client.users.list(None)?;
-    /// let filtered = client.users.list(Some(&UserFilter { status: Some(UserStatus::Active), ..Default::default() }))?;
+    /// let users = client.users.list(None).await?;
+    /// let filtered = client.users.list(Some(&UserFilter { status: Some(UserStatus::Active), ..Default::default() })).await?;
     /// ```
-    #[must_use]
-    pub fn list(&self, filter: Option<&UserFilter>) -> Result<Vec<User>, RedmineError> {
+    pub async fn list(&self, filter: Option<&UserFilter>) -> Result<Vec<User>, RedmineError> {
         let base = filter_to_query(filter);
         let query: Vec<(&str, String)> = base.iter().map(|(k, v)| (k.as_str(), v.clone())).collect();
-        self.http.get_all_paginated("/users.json", "users", &query, "users.list")
+        self.http.get_all_paginated("/users.json", "users", &query, "users.list").await
     }
 
     /// Retorna um usuário pelo ID.
@@ -45,12 +44,11 @@ impl UsersResource {
     ///
     /// # Exemplo
     /// ```rust,ignore
-    /// let user = client.users.get(1)?;
+    /// let user = client.users.get(1).await?;
     /// ```
-    #[must_use]
-    pub fn get(&self, id: RedmineId) -> Result<User, RedmineError> {
+    pub async fn get(&self, id: RedmineId) -> Result<User, RedmineError> {
         let path = format!("/users/{}.json", id);
-        self.http.get_single(&path, "user", &[], "users.get")
+        self.http.get_single(&path, "user", &[], "users.get").await
     }
 
     /// Retorna um usuário com associações (memberships, groups).
@@ -61,24 +59,22 @@ impl UsersResource {
     ///
     /// # Exemplo
     /// ```rust,ignore
-    /// let user = client.users.get_with_includes(1, &["memberships", "groups"])?;
+    /// let user = client.users.get_with_includes(1, &["memberships", "groups"]).await?;
     /// ```
-    #[must_use]
-    pub fn get_with_includes(&self, id: RedmineId, includes: &[&str]) -> Result<User, RedmineError> {
+    pub async fn get_with_includes(&self, id: RedmineId, includes: &[&str]) -> Result<User, RedmineError> {
         let path = format!("/users/{}.json", id);
         let query = vec![("include", includes.join(","))];
-        self.http.get_single(&path, "user", &query, "users.get_with_includes")
+        self.http.get_single(&path, "user", &query, "users.get_with_includes").await
     }
 
     /// Retorna os dados do usuário autenticado (via `/my/account.json`).
     ///
     /// # Exemplo
     /// ```rust,ignore
-    /// let current_user = client.users.get_current()?;
+    /// let current_user = client.users.get_current().await?;
     /// ```
-    #[must_use]
-    pub fn get_current(&self) -> Result<User, RedmineError> {
-        self.http.get_single("/my/account.json", "user", &[], "users.get_current")
+    pub async fn get_current(&self) -> Result<User, RedmineError> {
+        self.http.get_single("/my/account.json", "user", &[], "users.get_current").await
     }
 
     /// Cria um novo usuário.
@@ -89,12 +85,11 @@ impl UsersResource {
     /// # Exemplo
     /// ```rust,ignore
     /// let payload = CreateUserPayload { login: "joao".into(), firstname: "João".into(), lastname: "Silva".into(), mail: "joao@example.com".into(), ..Default::default() };
-    /// let user = client.users.create(&payload)?;
+    /// let user = client.users.create(&payload).await?;
     /// ```
-    #[must_use]
-    pub fn create(&self, payload: &CreateUserPayload) -> Result<User, RedmineError> {
+    pub async fn create(&self, payload: &CreateUserPayload) -> Result<User, RedmineError> {
         let body = serde_json::json!({ "user": payload });
-        self.http.post_single("/users.json", "user", &body, "users.create")
+        self.http.post_single("/users.json", "user", &body, "users.create").await
     }
 
     /// Atualiza um usuário existente.
@@ -106,13 +101,12 @@ impl UsersResource {
     /// # Exemplo
     /// ```rust,ignore
     /// let payload = UpdateUserPayload { firstname: Some("José".into()), ..Default::default() };
-    /// client.users.update(1, &payload)?;
+    /// client.users.update(1, &payload).await?;
     /// ```
-    #[must_use]
-    pub fn update(&self, id: RedmineId, payload: &UpdateUserPayload) -> Result<(), RedmineError> {
+    pub async fn update(&self, id: RedmineId, payload: &UpdateUserPayload) -> Result<(), RedmineError> {
         let path = format!("/users/{}.json", id);
         let body = serde_json::json!({ "user": payload });
-        self.http.put::<serde_json::Value, _>(&path, &body, "users.update")?;
+        self.http.put::<serde_json::Value, _>(&path, &body, "users.update").await?;
         Ok(())
     }
 
@@ -123,11 +117,10 @@ impl UsersResource {
     ///
     /// # Exemplo
     /// ```rust,ignore
-    /// client.users.delete(1)?;
+    /// client.users.delete(1).await?;
     /// ```
-    #[must_use]
-    pub fn delete(&self, id: RedmineId) -> Result<(), RedmineError> {
+    pub async fn delete(&self, id: RedmineId) -> Result<(), RedmineError> {
         let path = format!("/users/{}.json", id);
-        self.http.delete(&path, &[], "users.delete")
+        self.http.delete(&path, &[], "users.delete").await
     }
 }

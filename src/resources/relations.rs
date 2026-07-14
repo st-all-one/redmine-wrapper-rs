@@ -27,12 +27,11 @@ impl RelationsResource {
     ///
     /// # Exemplo
     /// ```rust,ignore
-    /// let rel = client.relations.get(42)?;
+    /// let rel = client.relations.get(42).await?;
     /// ```
-    #[must_use]
-    pub fn get(&self, id: RedmineId) -> Result<Relation, RedmineError> {
+    pub async fn get(&self, id: RedmineId) -> Result<Relation, RedmineError> {
         let path = format!("/relations/{}.json", id);
-        self.http.get_single(&path, "relation", &[], "relations.get")
+        self.http.get_single(&path, "relation", &[], "relations.get").await
     }
 
     /// Lista relações de uma issue específica.
@@ -42,12 +41,11 @@ impl RelationsResource {
     ///
     /// # Exemplo
     /// ```rust,ignore
-    /// let rels = client.relations.list_by_issue(10)?;
+    /// let rels = client.relations.list_by_issue(10).await?;
     /// ```
-    #[must_use]
-    pub fn list_by_issue(&self, issue_id: RedmineId) -> Result<Vec<Relation>, RedmineError> {
+    pub async fn list_by_issue(&self, issue_id: RedmineId) -> Result<Vec<Relation>, RedmineError> {
         let path = format!("/issues/{}/relations.json", issue_id);
-        let (items, _total) = self.http.get_paginated(&path, "relations", None, &[], "relations.list_by_issue")?;
+        let (items, _total) = self.http.get_paginated(&path, "relations", None, &[], "relations.list_by_issue").await?;
         Ok(items)
     }
 
@@ -60,13 +58,12 @@ impl RelationsResource {
     /// # Exemplo
     /// ```rust,ignore
     /// let payload = CreateRelationPayload { relation_type: "relates".into(), issue_to_id: 20 };
-    /// let rel = client.relations.create_on_issue(10, &payload)?;
+    /// let rel = client.relations.create_on_issue(10, &payload).await?;
     /// ```
-    #[must_use]
-    pub fn create_on_issue(&self, issue_id: RedmineId, payload: &CreateRelationPayload) -> Result<Relation, RedmineError> {
+    pub async fn create_on_issue(&self, issue_id: RedmineId, payload: &CreateRelationPayload) -> Result<Relation, RedmineError> {
         let path = format!("/issues/{}/relations.json", issue_id);
         let body = serde_json::json!({ "relation": payload });
-        self.http.post_single(&path, "relation", &body, "relations.create_on_issue")
+        self.http.post_single(&path, "relation", &body, "relations.create_on_issue").await
     }
 
     /// Exclui uma relação.
@@ -76,11 +73,10 @@ impl RelationsResource {
     ///
     /// # Exemplo
     /// ```rust,ignore
-    /// client.relations.delete(42)?;
+    /// client.relations.delete(42).await?;
     /// ```
-    #[must_use]
-    pub fn delete(&self, id: RedmineId) -> Result<(), RedmineError> {
+    pub async fn delete(&self, id: RedmineId) -> Result<(), RedmineError> {
         let path = format!("/relations/{}.json", id);
-        self.http.delete(&path, &[], "relations.delete")
+        self.http.delete(&path, &[], "relations.delete").await
     }
 }

@@ -6,14 +6,16 @@
 
 ## Causa
 
-Muitas requisições em curto período.
+Muitas requisições em curto período no servidor.
 
 ## Exemplo
 
 ```rust,ignore
 match result {
-    Err(RedmineError::Api { category: ErrorCategory::RateLimited, detail, instance, .. }) => {
-        eprintln!("{detail} (correlation: {instance})");
+    Err(RedmineError::RateLimited { retry_after, .. }) => {
+        if let Some(secs) = retry_after {
+            eprintln!("Rate limited — aguarde {secs}s");
+        }
     }
     _ => {}
 }

@@ -2,11 +2,11 @@
 
 **Categoria:** `ErrorCategory::NetworkError`
 **HTTP Status:** 503
-**Gatilho:** Erro de conexão
+**Gatilho:** Erro de rede ou serviço indisponível
 
 ## Causa
 
-Falha de rede, DNS ou conexão recusada.
+Falha de conexão com o servidor Redmine (DNS, TLS, ou servidor fora do ar).
 
 ## Exemplo
 
@@ -21,4 +21,4 @@ match result {
 
 ## Prevenção
 
-Verifique a conectividade com o servidor Redmine. Confirme que `base_url` está correto.
+Verifique a conectividade de rede e se o servidor Redmine está operacional. Considere implementar retry com backoff.

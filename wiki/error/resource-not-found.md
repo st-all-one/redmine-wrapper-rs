@@ -2,11 +2,11 @@
 
 **Categoria:** `ErrorCategory::ResourceNotFound`
 **HTTP Status:** 404
-**Gatilho:** Recurso não encontrado
+**Gatilho:** Recurso inexistente
 
 ## Causa
 
-O ID ou caminho solicitado não existe.
+O ID ou caminho do recurso não existe no Redmine.
 
 ## Exemplo
 
@@ -21,4 +21,4 @@ match result {
 
 ## Prevenção
 
-Verifique se o ID está correto. Use filtros de listagem para confirmar a existência do recurso antes de acessá-lo.
+Verifique se o ID do recurso está correto. Consulte a listagem antes de acessar um recurso específico.

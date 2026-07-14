@@ -2,13 +2,15 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-use std::sync::Mutex;
-use reqwest::blocking::{Client, Response};
 use reqwest::header::{HeaderMap, HeaderValue, CONTENT_TYPE};
+use reqwest::{Client, RequestBuilder, Response};
 use serde::de::DeserializeOwned;
 use serde::Serialize;
+use tokio::sync::Mutex;
+use tracing::instrument;
 use url::form_urlencoded::Serializer as UrlSerializer;
-use crate::core::config::ResolvedConfig;
+
+use crate::core::config::RedmineConfig;
 use crate::core::constants::DEFAULT_PAGINATION_LIMIT;
 use crate::core::errors::{ErrorCategory, ErrorContext, RedmineError};
 use crate::http::pagination::PaginationParams;
@@ -20,13 +22,13 @@ const USER_AGENT: &str = concat!("redmine-wrapper-rs/", env!("CARGO_PKG_VERSION"
 #[derive(Debug)]
 pub(crate) struct HttpClient {
     client: Client,
-    config: ResolvedConfig,
+    config: RedmineConfig,
     rate_limiter: Mutex<SlidingWindow>,
 }
 
 impl HttpClient {
     /// Cria um novo HttpClient a partir da config resolvida.
-    pub fn new(config: ResolvedConfig) -> Result<Self, RedmineError> {
+    pub fn new(config: RedmineConfig) -> Result<Self, RedmineError> {
         let mut headers = HeaderMap::new();
         headers.insert(CONTENT_TYPE, HeaderValue::from_static("application/json"));
 
@@ -45,122 +47,157 @@ impl HttpClient {
     }
 
     /// Executa uma requisição GET e desserializa a resposta JSON.
-    ///
-    /// # Parâmetros
-    /// - `path` — caminho do endpoint (ex: `/issues.json`)
-    /// - `query` — pares chave-valor para parâmetros de query string
-    /// - `operation` — identificador da operação para logging e rastreamento
-    pub fn get<T: DeserializeOwned>(&self, path: &str, query: &[(&str, String)], operation: &str) -> Result<T, RedmineError> {
+    pub async fn get<T: DeserializeOwned>(
+        &self,
+        path: &str,
+        query: &[(&str, String)],
+        operation: &str,
+    ) -> Result<T, RedmineError> {
         let url = self.build_url(path, query)?;
-        self.execute(|| self.client.get(&url).headers(self.auth_headers()), operation)
+        let builder = self
+            .client
+            .get(&url)
+            .headers(self.auth_headers());
+        self.execute(builder, operation).await
     }
 
     /// Executa uma requisição POST com corpo JSON e desserializa a resposta.
-    ///
-    /// # Parâmetros
-    /// - `path` — caminho do endpoint
-    /// - `body` — dados a serem enviados como JSON
-    /// - `operation` — identificador da operação para logging e rastreamento
-    pub fn post<T: DeserializeOwned, B: Serialize>(&self, path: &str, body: &B, operation: &str) -> Result<T, RedmineError> {
+    pub async fn post<T: DeserializeOwned, B: Serialize>(
+        &self,
+        path: &str,
+        body: &B,
+        operation: &str,
+    ) -> Result<T, RedmineError> {
         let url = self.build_url(path, &[])?;
         let json_body = serde_json::to_string(body)?;
-        self.execute(|| self.client.post(&url).headers(self.auth_headers()).body(json_body.clone()), operation)
+        let builder = self
+            .client
+            .post(&url)
+            .headers(self.auth_headers())
+            .body(json_body);
+        self.execute(builder, operation).await
     }
 
     /// Executa uma requisição POST com dados binários (upload de arquivos).
-    ///
-    /// # Parâmetros
-    /// - `path` — caminho do endpoint de upload
-    /// - `data` — conteúdo binário do arquivo
-    /// - `content_type` — tipo MIME do conteúdo (ex: `application/octet-stream`)
-    /// - `operation` — identificador da operação para logging e rastreamento
-    pub fn post_binary<T: DeserializeOwned>(&self, path: &str, data: &[u8], content_type: &str, operation: &str) -> Result<T, RedmineError> {
+    pub async fn post_binary<T: DeserializeOwned>(
+        &self,
+        path: &str,
+        data: &[u8],
+        content_type: &str,
+        operation: &str,
+    ) -> Result<T, RedmineError> {
         let url = self.build_url(path, &[])?;
-        self.execute(|| self.client.post(&url).headers(self.auth_headers()).header(CONTENT_TYPE, content_type).body(data.to_vec()), operation)
+        let builder = self
+            .client
+            .post(&url)
+            .headers(self.auth_headers())
+            .header(CONTENT_TYPE, content_type)
+            .body(data.to_vec());
+        self.execute(builder, operation).await
     }
 
     /// Executa uma requisição PUT com corpo JSON para atualizar um recurso.
-    ///
-    /// # Parâmetros
-    /// - `path` — caminho do endpoint
-    /// - `body` — dados atualizados a serem enviados como JSON
-    /// - `operation` — identificador da operação para logging e rastreamento
-    pub fn put<T: DeserializeOwned, B: Serialize>(&self, path: &str, body: &B, operation: &str) -> Result<T, RedmineError> {
+    pub async fn put<T: DeserializeOwned, B: Serialize>(
+        &self,
+        path: &str,
+        body: &B,
+        operation: &str,
+    ) -> Result<T, RedmineError> {
         let url = self.build_url(path, &[])?;
         let json_body = serde_json::to_string(body)?;
-        self.execute(|| self.client.put(&url).headers(self.auth_headers()).body(json_body.clone()), operation)
+        let builder = self
+            .client
+            .put(&url)
+            .headers(self.auth_headers())
+            .body(json_body);
+        self.execute(builder, operation).await
     }
 
     /// Executa uma GET e extrai um campo específico do JSON de resposta.
-    ///
-    /// Útil quando a API retorna envelopes como `{ "issue": { ... } }`.
-    /// Extrai o valor da chave `key` e desserializa diretamente no tipo `T`.
-    ///
-    /// # Parâmetros
-    /// - `path` — caminho do endpoint
-    /// - `key` — nome do campo a ser extraído (ex: `"issue"`)
-    /// - `query` — pares chave-valor para parâmetros de query string
-    /// - `op` — identificador da operação para logging e rastreamento
-    pub fn get_single<T: DeserializeOwned>(&self, path: &str, key: &str, query: &[(&str, String)], op: &str) -> Result<T, RedmineError> {
-        let v: serde_json::Value = self.get(path, query, op)?;
-        let inner = v.get(key).ok_or_else(|| RedmineError::api(ErrorCategory::ParseError, 200, format!("campo '{key}' não encontrado"), ErrorContext { operation: Some(op.into()), ..Default::default() }))?;
+    pub async fn get_single<T: DeserializeOwned>(
+        &self,
+        path: &str,
+        key: &str,
+        query: &[(&str, String)],
+        op: &str,
+    ) -> Result<T, RedmineError> {
+        let v: serde_json::Value = self.get(path, query, op).await?;
+        let inner = v.get(key).ok_or_else(|| {
+            RedmineError::api(
+                ErrorCategory::ParseError,
+                200,
+                format!("campo '{key}' não encontrado"),
+                ErrorContext {
+                    operation: Some(op.into()),
+                    ..Default::default()
+                },
+            )
+        })?;
         serde_json::from_value(inner.clone()).map_err(RedmineError::from)
     }
 
     /// Executa uma POST e extrai um campo específico do JSON de resposta.
-    ///
-    /// Semelhante a `get_single`, mas para requisições de criação (POST).
-    /// Extrai o valor da chave `key` do envelope de resposta e desserializa
-    /// no tipo `T`.
-    ///
-    /// # Parâmetros
-    /// - `path` — caminho do endpoint
-    /// - `key` — nome do campo a ser extraído (ex: `"issue"`)
-    /// - `body` — dados a serem enviados como JSON
-    /// - `op` — identificador da operação para logging e rastreamento
-    pub fn post_single<T: DeserializeOwned, B: Serialize>(&self, path: &str, key: &str, body: &B, op: &str) -> Result<T, RedmineError> {
-        let v: serde_json::Value = self.post(path, body, op)?;
-        let inner = v.get(key).ok_or_else(|| RedmineError::api(ErrorCategory::ParseError, 201, format!("campo '{key}' não encontrado"), ErrorContext { operation: Some(op.into()), ..Default::default() }))?;
+    pub async fn post_single<T: DeserializeOwned, B: Serialize>(
+        &self,
+        path: &str,
+        key: &str,
+        body: &B,
+        op: &str,
+    ) -> Result<T, RedmineError> {
+        let v: serde_json::Value = self.post(path, body, op).await?;
+        let inner = v.get(key).ok_or_else(|| {
+            RedmineError::api(
+                ErrorCategory::ParseError,
+                201,
+                format!("campo '{key}' não encontrado"),
+                ErrorContext {
+                    operation: Some(op.into()),
+                    ..Default::default()
+                },
+            )
+        })?;
         serde_json::from_value(inner.clone()).map_err(RedmineError::from)
     }
 
     /// Executa uma GET com suporte a paginação e retorna os itens da página
     /// juntamente com o total de registros disponíveis.
-    ///
-    /// # Parâmetros
-    /// - `path` — caminho do endpoint
-    /// - `item_key` — chave do array de itens no JSON de resposta (ex: `"issues"`)
-    /// - `params` — parâmetros opcionais de paginação (limite e offset)
-    /// - `query` — pares chave-valor adicionais para a query string (filtros)
-    /// - `op` — identificador da operação para logging e rastreamento
-    ///
-    /// # Retorno
-    /// Uma tupla com a lista de itens da página e o total de registros.
-    pub fn get_paginated<T: DeserializeOwned>(&self, path: &str, item_key: &str, params: Option<&PaginationParams>, query: &[(&str, String)], op: &str) -> Result<(Vec<T>, u32), RedmineError> {
+    pub async fn get_paginated<T: DeserializeOwned>(
+        &self,
+        path: &str,
+        item_key: &str,
+        params: Option<&PaginationParams>,
+        query: &[(&str, String)],
+        op: &str,
+    ) -> Result<(Vec<T>, u32), RedmineError> {
         let mut q = query.to_vec();
-        if let Some(p) = params { for (k, v) in p.to_query() { q.push((k, v)); } } else { q.push(("limit", DEFAULT_PAGINATION_LIMIT.to_string())); }
-        let v: serde_json::Value = self.get(path, &q, op)?;
-        let total = v.get("total_count").and_then(|v| v.as_u64()).unwrap_or(0) as u32;
-        let items = v.get(item_key).and_then(|v| serde_json::from_value(v.clone()).ok()).unwrap_or_default();
+        if let Some(p) = params {
+            for (k, v) in p.to_query() {
+                q.push((k, v));
+            }
+        } else {
+            q.push(("limit", DEFAULT_PAGINATION_LIMIT.to_string()));
+        }
+        let v: serde_json::Value = self.get(path, &q, op).await?;
+        let total = v
+            .get("total_count")
+            .and_then(|v| v.as_u64())
+            .unwrap_or(0) as u32;
+        let items = v
+            .get(item_key)
+            .and_then(|v| serde_json::from_value(v.clone()).ok())
+            .unwrap_or_default();
         Ok((items, total))
     }
 
     /// Executa requisições GET paginadas automaticamente até obter todos os
-    /// registros. Útil quando não há limite de página e deseja-se coletar
-    /// o conjunto completo de dados.
-    ///
-    /// Internamente faz requisições sucessivas incrementando o offset até
-    /// que todos os registros tenham sido obtidos.
-    ///
-    /// # Parâmetros
-    /// - `path` — caminho do endpoint
-    /// - `item_key` — chave do array de itens no JSON de resposta (ex: `"issues"`)
-    /// - `query` — pares chave-valor adicionais para a query string
-    /// - `op` — identificador da operação para logging e rastreamento
-    ///
-    /// # Retorno
-    /// Lista completa de todos os itens disponíveis.
-    pub fn get_all_paginated<T: DeserializeOwned>(&self, path: &str, item_key: &str, query: &[(&str, String)], op: &str) -> Result<Vec<T>, RedmineError> {
+    /// registros.
+    pub async fn get_all_paginated<T: DeserializeOwned>(
+        &self,
+        path: &str,
+        item_key: &str,
+        query: &[(&str, String)],
+        op: &str,
+    ) -> Result<Vec<T>, RedmineError> {
         let limit = DEFAULT_PAGINATION_LIMIT;
         let mut offset = 0u32;
         let mut all = Vec::new();
@@ -168,37 +205,52 @@ impl HttpClient {
             let mut pq = query.to_vec();
             pq.push(("offset", offset.to_string()));
             pq.push(("limit", limit.to_string()));
-            let v: serde_json::Value = self.get(path, &pq, op)?;
-            let total = v.get("total_count").and_then(|v| v.as_u64()).unwrap_or(0) as u32;
-            let items: Vec<T> = v.get(item_key).and_then(|v| serde_json::from_value(v.clone()).ok()).unwrap_or_default();
+            let v: serde_json::Value = self.get(path, &pq, op).await?;
+            let total = v
+                .get("total_count")
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0) as u32;
+            let items: Vec<T> = v
+                .get(item_key)
+                .and_then(|v| serde_json::from_value(v.clone()).ok())
+                .unwrap_or_default();
             let c = items.len() as u32;
             all.extend(items);
-            if offset + c >= total { break; }
+            if offset + c >= total {
+                break;
+            }
             offset += limit;
         }
         Ok(all)
     }
 
     /// Executa uma requisição DELETE para remover um recurso.
-    ///
-    /// # Parâmetros
-    /// - `path` — caminho do endpoint do recurso a ser removido
-    /// - `query` — pares chave-valor para parâmetros de query string
-    /// - `operation` — identificador da operação para logging e rastreamento
-    pub fn delete(&self, path: &str, query: &[(&str, String)], operation: &str) -> Result<(), RedmineError> {
+    pub async fn delete(
+        &self,
+        path: &str,
+        query: &[(&str, String)],
+        operation: &str,
+    ) -> Result<(), RedmineError> {
         let url = self.build_url(path, query)?;
-        self.execute_void(|| self.client.delete(&url).headers(self.auth_headers()), operation)
+        let builder = self
+            .client
+            .delete(&url)
+            .headers(self.auth_headers());
+        self.execute_void(builder, operation).await
     }
 
     fn auth_headers(&self) -> HeaderMap {
         let mut headers = HeaderMap::new();
         if let Some(ref token) = self.config.token {
-            headers.insert("X-Redmine-API-Key", HeaderValue::from_str(token).unwrap());
+            headers.insert(
+                "X-Redmine-API-Key",
+                HeaderValue::from_str(token).expect("token deve conter caracteres ASCII válidos"),
+            );
         }
         if let Some(ref switch_user) = self.config.switch_user {
             headers.insert(
                 "X-Redmine-Switch-User",
-                HeaderValue::from_str(switch_user).unwrap(),
+                HeaderValue::from_str(switch_user).expect("switch_user deve conter caracteres ASCII válidos"),
             );
         }
         headers
@@ -217,14 +269,21 @@ impl HttpClient {
         Ok(url)
     }
 
-    fn execute<T: DeserializeOwned>(
+    async fn acquire_rate_limit(&self) {
+        let mut limiter = self.rate_limiter.lock().await;
+        limiter.acquire().await;
+    }
+
+    /// Executa uma requisição, aplica rate limiting e parseia a resposta JSON.
+    #[instrument(skip(self, builder), fields(operation = %operation))]
+    async fn execute<T: DeserializeOwned>(
         &self,
-        request_fn: impl Fn() -> reqwest::blocking::RequestBuilder,
+        builder: RequestBuilder,
         operation: &str,
     ) -> Result<T, RedmineError> {
-        self.acquire_rate_limit();
+        self.acquire_rate_limit().await;
 
-        let response = request_fn().send().map_err(|e| {
+        let response = builder.send().await.map_err(|e| {
             if e.is_timeout() {
                 RedmineError::Timeout {
                     duration: self.config.timeout,
@@ -238,17 +297,18 @@ impl HttpClient {
             }
         })?;
 
-        Self::handle_response(response, operation)
+        Self::handle_response(response, operation).await
     }
 
-    fn execute_void(
+    /// Executa uma requisição, aplica rate limiting e descarta o corpo da resposta.
+    async fn execute_void(
         &self,
-        request_fn: impl Fn() -> reqwest::blocking::RequestBuilder,
+        builder: RequestBuilder,
         operation: &str,
     ) -> Result<(), RedmineError> {
-        self.acquire_rate_limit();
+        self.acquire_rate_limit().await;
 
-        let response = request_fn().send().map_err(|e| {
+        let response = builder.send().await.map_err(|e| {
             if e.is_timeout() {
                 RedmineError::Timeout {
                     duration: self.config.timeout,
@@ -267,11 +327,11 @@ impl HttpClient {
             return Ok(());
         }
 
-        let body = response.text().unwrap_or_default();
+        let body = response.text().await.unwrap_or_default();
         Err(Self::map_error(status.as_u16(), &body, operation))
     }
 
-    fn handle_response<T: DeserializeOwned>(
+    async fn handle_response<T: DeserializeOwned>(
         response: Response,
         operation: &str,
     ) -> Result<T, RedmineError> {
@@ -290,14 +350,14 @@ impl HttpClient {
             ));
         }
 
-        let body = response.text().unwrap_or_default();
+        let body = response.text().await.unwrap_or_default();
 
         if !status.is_success() {
             return Err(Self::map_error(status.as_u16(), &body, operation));
         }
 
         serde_json::from_str(&body).map_err(|e| {
-            log::error!(
+            tracing::error!(
                 target: "redmine_wrapper::http",
                 "{}: falha ao desserializar resposta: {}",
                 operation,
@@ -343,10 +403,7 @@ impl HttpClient {
         if category == ErrorCategory::RateLimited {
             let retry_after = serde_json::from_str::<serde_json::Value>(body)
                 .ok()
-                .and_then(|v| {
-                    v.get("retry_after")
-                        .and_then(|v| v.as_u64())
-                });
+                .and_then(|v| v.get("retry_after").and_then(|v| v.as_u64()));
             return RedmineError::RateLimited {
                 retry_after,
                 context: Box::new(context),
@@ -355,12 +412,4 @@ impl HttpClient {
 
         RedmineError::api(category, status, detail, context)
     }
-
-    fn acquire_rate_limit(&self) {
-        if let Ok(mut limiter) = self.rate_limiter.lock() {
-            limiter.acquire();
-        }
-    }
 }
-
-

@@ -15,42 +15,80 @@ pub enum AuthMethod {
     Header,
 }
 
-/// Configuração fornecida pelo usuário para criar um cliente Redmine.
+/// Configuração do cliente Redmine com valores padrão aplicados.
 ///
-/// # Exemplo com Builder
+/// Construída via [`RedmineConfigBuilder`] ou diretamente com
+/// `RedmineConfig { ..Default::default() }`.
+///
+/// # Exemplo
 ///
 /// ```rust,ignore
-/// use redmine_wrapper::core::config::RedmineConfigBuilder;
+/// use redmine_wrapper::RedmineConfigBuilder;
 ///
 /// let config = RedmineConfigBuilder::default()
 ///     .base_url("https://redmine.example.com")
 ///     .token("seu-api-key")
 ///     .build()?;
 /// ```
-#[derive(Debug, Clone, Default)]
+#[derive(Clone)]
 pub struct RedmineConfig {
-    /// URL base da instância Redmine (ex: `https://redmine.example.com`).
+    /// URL base normalizada (sem barra final).
     pub base_url: String,
 
-    /// Chave de API do Redmine para autenticação via header `X-Redmine-API-Key`.
-    /// Opcional — permite acesso anônimo a recursos públicos.
+    /// Chave de API para autenticação via header `X-Redmine-API-Key`.
+    /// `None` indica acesso anônimo a recursos públicos.
     pub token: Option<String>,
 
-    /// Método de autenticação para a API do Redmine.
-    /// Opcional — usa `Header` (único suportado atualmente) quando `None`.
-    pub auth_method: Option<AuthMethod>,
+    /// Método de autenticação (padrão: `Header`).
+    pub auth_method: AuthMethod,
 
-    /// Nome de usuário para impersonação (requer permissão de administrador no Redmine).
-    /// Opcional — ativa o header `X-Redmine-Switch-User` se informado.
+    /// Nome de usuário para impersonação, se configurado.
+    /// `None` quando não há impersonação.
     pub switch_user: Option<String>,
 
-    /// Timeout máximo para requisições HTTP.
-    /// Opcional — padrão: `DEFAULT_TIMEOUT_SECS` (30 segundos).
-    pub timeout: Option<Duration>,
+    /// Timeout para requisições HTTP (padrão: 30s).
+    pub timeout: Duration,
 
-    /// Máximo de requisições por segundo (rate limiting).
-    /// Opcional — padrão: `DEFAULT_MAX_RPS` (10 requisições/s).
-    pub max_rps: Option<u32>,
+    /// Máximo de requisições por segundo (padrão: 10).
+    pub max_rps: u32,
+}
+
+impl fmt::Debug for RedmineConfig {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("RedmineConfig")
+            .field("base_url", &self.base_url)
+            .field("token", &self.token.as_deref().map(|_| "***"))
+            .field("auth_method", &self.auth_method)
+            .field("switch_user", &self.switch_user)
+            .field("timeout", &self.timeout)
+            .field("max_rps", &self.max_rps)
+            .finish()
+    }
+}
+
+impl Default for RedmineConfig {
+    fn default() -> Self {
+        Self {
+            base_url: String::new(),
+            token: None,
+            auth_method: AuthMethod::default(),
+            switch_user: None,
+            timeout: Duration::from_secs(DEFAULT_TIMEOUT_SECS),
+            max_rps: DEFAULT_MAX_RPS,
+        }
+    }
+}
+
+impl RedmineConfig {
+    /// Retorna um builder para configurar e validar uma [`RedmineConfig`].
+    pub fn builder() -> RedmineConfigBuilder {
+        RedmineConfigBuilder::default()
+    }
+
+    /// Concatena a `base_url` com o `path` informado.
+    pub(crate) fn api_url(&self, path: &str) -> String {
+        format!("{}{}", self.base_url, path)
+    }
 }
 
 /// Builder para [`RedmineConfig`] com validação na construção.
@@ -58,7 +96,7 @@ pub struct RedmineConfig {
 /// # Exemplo
 ///
 /// ```rust,ignore
-/// use redmine_wrapper::core::config::RedmineConfigBuilder;
+/// use redmine_wrapper::RedmineConfigBuilder;
 ///
 /// let config = RedmineConfigBuilder::default()
 ///     .base_url("https://redmine.example.com")
@@ -118,12 +156,12 @@ impl RedmineConfigBuilder {
     /// Constrói o [`RedmineConfig`] validado.
     ///
     /// Retorna [`RedmineError::Config`] se `base_url` estiver vazia.
-    #[must_use]
     pub fn build(self) -> Result<RedmineConfig, crate::core::errors::RedmineError> {
         let base_url = self.base_url.ok_or_else(|| {
             crate::core::errors::RedmineError::Config("base_url é obrigatória".into())
         })?;
-        if base_url.trim().is_empty() {
+        let base_url = base_url.trim_end_matches('/').to_string();
+        if base_url.is_empty() {
             return Err(crate::core::errors::RedmineError::Config(
                 "base_url não pode estar vazia".into(),
             ));
@@ -131,88 +169,10 @@ impl RedmineConfigBuilder {
         Ok(RedmineConfig {
             base_url,
             token: self.token,
-            auth_method: self.auth_method,
+            auth_method: self.auth_method.unwrap_or_default(),
             switch_user: self.switch_user,
-            timeout: self.timeout,
-            max_rps: self.max_rps,
+            timeout: self.timeout.unwrap_or(Duration::from_secs(DEFAULT_TIMEOUT_SECS)),
+            max_rps: self.max_rps.unwrap_or(DEFAULT_MAX_RPS),
         })
-    }
-}
-
-/// Configuração resolvida com valores padrão aplicados a partir de [`RedmineConfig`].
-///
-/// Gerada internamente por [`ResolvedConfig::from_config`] e consumida pelo
-/// [`HttpClient`](crate::http::client::HttpClient).
-#[derive(Clone)]
-pub struct ResolvedConfig {
-    /// URL base normalizada (sem barra final).
-    pub base_url: String,
-
-    /// Chave de API para autenticação via header `X-Redmine-API-Key`.
-    /// `None` indica acesso anônimo a recursos públicos.
-    pub token: Option<String>,
-
-    /// Método de autenticação resolvido (padrão: `Header`).
-    pub auth_method: AuthMethod,
-
-    /// Nome de usuário para impersonação, se configurado.
-    /// `None` quando não há impersonação.
-    pub switch_user: Option<String>,
-
-    /// Timeout resolvido para requisições HTTP.
-    pub timeout: Duration,
-
-    /// Máximo de requisições por segundo resolvido (rate limiting).
-    pub max_rps: u32,
-}
-
-impl fmt::Debug for ResolvedConfig {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("ResolvedConfig")
-            .field("base_url", &self.base_url)
-            .field("token", &self.token.as_deref().map(|_| "***"))
-            .field("auth_method", &self.auth_method)
-            .field("switch_user", &self.switch_user)
-            .field("timeout", &self.timeout)
-            .field("max_rps", &self.max_rps)
-            .finish()
-    }
-}
-
-impl ResolvedConfig {
-    /// Converte um [`RedmineConfig`] em [`ResolvedConfig`], aplicando valores padrão
-    /// onde o usuário não forneceu valor.
-    ///
-    /// # Validações
-    /// - Remove a barra final de `base_url`.
-    /// - Retorna [`RedmineError::Config`](crate::core::errors::RedmineError::Config)
-    ///   se `base_url` estiver vazia.
-    /// - Campos `None` recebem os padrões definidos em [`constants`](crate::core::constants).
-    #[must_use]
-    pub(crate) fn from_config(config: &RedmineConfig) -> Result<Self, crate::core::errors::RedmineError> {
-        use crate::core::errors::RedmineError;
-
-        let base_url = config.base_url.trim_end_matches('/').to_string();
-        if base_url.is_empty() {
-            return Err(RedmineError::Config("base_url não pode estar vazia".into()));
-        }
-
-        Ok(Self {
-            base_url,
-            token: config.token.clone(),
-            auth_method: config.auth_method.unwrap_or_default(),
-            switch_user: config.switch_user.clone(),
-            timeout: config.timeout.unwrap_or(Duration::from_secs(DEFAULT_TIMEOUT_SECS)),
-            max_rps: config.max_rps.unwrap_or(DEFAULT_MAX_RPS),
-        })
-    }
-
-    /// Concatena a `base_url` com o `path` informado, produzindo a URL absoluta do endpoint.
-    ///
-    /// # Exemplo
-    /// Se `base_url` é `https://redmine.example.com` e `path` é `/issues.json`,
-    /// retorna `https://redmine.example.com/issues.json`.
-    pub(crate) fn api_url(&self, path: &str) -> String {
-        format!("{}{}", self.base_url, path)
     }
 }

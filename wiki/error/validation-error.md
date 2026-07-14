@@ -2,18 +2,23 @@
 
 **Categoria:** `ErrorCategory::ValidationError`
 **HTTP Status:** 422
-**Gatilho:** Dados inválidos
+**Gatilho:** Payload inválido
 
 ## Causa
 
-O payload enviado não passou nas validações do Redmine (campo obrigatório ausente, valor inválido, referência inexistente).
+Os dados enviados não passaram na validação do servidor (campo obrigatório ausente, formato inválido, etc.).
 
 ## Exemplo
 
 ```rust,ignore
 match result {
-    Err(RedmineError::Api { category: ErrorCategory::ValidationError, detail, instance, .. }) => {
+    Err(RedmineError::Api { category: ErrorCategory::ValidationError, detail, instance, context, .. }) => {
         eprintln!("{detail} (correlation: {instance})");
+        if let Some(errors) = context.api_errors {
+            for e in errors {
+                eprintln!("  → {e}");
+            }
+        }
     }
     _ => {}
 }
@@ -21,4 +26,4 @@ match result {
 
 ## Prevenção
 
-Consulte o campo `api_errors` no `ErrorContext` para mensagens específicas. Ex: 'Subject não pode ficar em branco'.
+Revise os campos obrigatórios do payload. Verifique a mensagem de erro retornada no campo `context.api_errors` para detalhes.

@@ -24,11 +24,10 @@ impl RolesResource {
     ///
     /// # Exemplo
     /// ```rust,ignore
-    /// let roles = client.roles.list()?;
+    /// let roles = client.roles.list().await?;
     /// ```
-    #[must_use]
-    pub fn list(&self) -> Result<Vec<Role>, RedmineError> {
-        let (items, _total) = self.http.get_paginated("/roles.json", "roles", None, &[], "roles.list")?;
+    pub async fn list(&self) -> Result<Vec<Role>, RedmineError> {
+        let (items, _total) = self.http.get_paginated("/roles.json", "roles", None, &[], "roles.list").await?;
         Ok(items)
     }
 
@@ -39,11 +38,10 @@ impl RolesResource {
     ///
     /// # Exemplo
     /// ```rust,ignore
-    /// let role = client.roles.get(4)?;
+    /// let role = client.roles.get(4).await?;
     /// ```
-    #[must_use]
-    pub fn get(&self, id: RedmineId) -> Result<Role, RedmineError> {
+    pub async fn get(&self, id: RedmineId) -> Result<Role, RedmineError> {
         let path = format!("/roles/{}.json", id);
-        self.http.get_single(&path, "role", &[], "roles.get")
+        self.http.get_single(&path, "role", &[], "roles.get").await
     }
 }

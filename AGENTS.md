@@ -5,17 +5,20 @@
 ```bash
 cargo build
 cargo test
+cargo clippy
 cargo check --example demo
+REDMINE_URL=https://redmine.example.com REDMINE_TOKEN=xxx cargo run --example demo
 ```
 
 ## Stack
 
-- **HTTP**: `reqwest` (blocking, rustls-tls)
+- **Runtime async**: `tokio` (sync, time)
+- **HTTP**: `reqwest` (async, rustls-tls)
 - **Serialização**: `serde` + `serde_json`
 - **Erros**: `thiserror` (enum-based, RFC 7807-aligned)
-- **Logs**: `log` crate (sem logger forçado)
+- **Logs**: `tracing` (structured, spans, `#[instrument]`)
 - **Correlation IDs**: `uuid` v7
-- **Rate limiting**: Sliding window manual
+- **Rate limiting**: Sliding window manual (`tokio::sync::Mutex`)
 
 ## Arquitetura
 
@@ -23,18 +26,17 @@ cargo check --example demo
 redmine_wrapper (lib)
 ├── lib.rs              # Barrel: re-exports públicos
 ├── client/
-│   ├── mod.rs          # RedmineClient (factory + Deref)
-│   └── resources.rs    # ResourceGroup (22 campos)
+│   └── mod.rs          # RedmineClient (22 resources como campos diretos)
 ├── core/
 │   ├── mod.rs
-│   ├── config.rs       # RedmineConfig, ResolvedConfig, AuthMethod
+│   ├── config.rs       # RedmineConfig (unificado), RedmineConfigBuilder
 │   ├── errors.rs       # RedmineError (enum), ErrorCategory (12), ErrorContext
 │   └── constants.rs    # DEFAULT_TIMEOUT, DEFAULT_MAX_RPS, etc.
 ├── http/
 │   ├── mod.rs
-│   ├── client.rs       # HttpClient (reqwest wrapper, auth, rate-limit)
+│   ├── client.rs       # HttpClient async (reqwest wrapper, auth, rate-limit)
 │   ├── pagination.rs   # PaginationParams, PaginatedResponse
-│   └── rate_limiter.rs # SlidingWindow (Mutex<VecDeque>)
+│   └── rate_limiter.rs # SlidingWindow (tokio::sync::Mutex<VecDeque>)
 ├── types/              # 22 módulos de tipos serde
 │   ├── mod.rs          # Barrel
 │   ├── base.rs         # RedmineId, IdName, CustomFieldValue, etc.
@@ -65,19 +67,21 @@ redmine_wrapper (lib)
 - Todos os tipos `Debug, Clone, Serialize, Deserialize`
 - `#[serde(rename_all = "snake_case")]` em tipos da API
 - Campos opcionais: `Option<T>` com `#[serde(skip_serializing_if = "Option::is_none")]`
-- Métodos retornam `Result<T, RedmineError>` (síncrono)
-- Identificador de operação (ex: `"issues.list"`) para logging
+- Métodos públicos retornam `Result<T, RedmineError>` (async)
+- Identificador de operação (ex: `"issues.list"`) para tracing/rastreio
 - Documentação pública em português
+- `unwrap()` proibido em produção (use `expect()` com mensagem)
 
 ## Dependências (prod)
 
 | Crate | Motivo |
 |-------|--------|
-| `reqwest` | HTTP client com TLS |
+| `tokio` | Runtime async (sync, time) |
+| `reqwest` | HTTP client async com TLS |
 | `serde` + `serde_json` | Serialização JSON |
 | `thiserror` | Macro de erro derive |
+| `tracing` | Logging estruturado com spans |
 | `uuid` (v7) | Correlation IDs |
-| `log` | Logging facade |
 
 ## Testes
 
@@ -86,12 +90,14 @@ cargo test                      # todos os testes
 cargo test --test errors_test   # testes de erro
 cargo test --test client_test   # testes de integração (wiremock)
 cargo test --test pagination_test # testes de paginação
+cargo clippy                    # lints
 ```
 
 ## Exemplos
 
 ```bash
 REDMINE_URL=https://redmine.example.com REDMINE_TOKEN=xxx cargo run --example demo
+REDMINE_URL=https://redmine.example.com REDMINE_TOKEN=xxx cargo run --example check
 ```
 
 ## Endpoints (86 total, 22 resources)

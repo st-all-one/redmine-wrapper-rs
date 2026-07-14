@@ -2,23 +2,25 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-/// Teste manual completo da biblioteca redmine-wrapper-rs.
-///
-/// Avalia todos os 22 recursos da API em modo **somente leitura**:
-/// nenhum dado é criado, alterado ou excluído.
-///
-/// Uso:
-/// ```bash
-/// REDMINE_URL=https://redmine.seu-dominio.com REDMINE_TOKEN=sua-chave cargo run --example check
-/// ```
-///
-/// Cada operação é executada e seu resultado (PASS/FAIL/SKIP) é
-/// registrado. Ao final, um resumo consolidado é exibido.
+//! Teste manual completo da biblioteca redmine-wrapper-rs.
+//!
+//! Avalia todos os 22 recursos da API em modo **somente leitura**:
+//! nenhum dado e criado, alterado ou excluido.
+#![allow(clippy::unwrap_used, clippy::pedantic)]
+//!
+//! Uso:
+//! ```bash
+//! REDMINE_URL=https://redmine.seu-dominio.com REDMINE_TOKEN=sua-chave cargo run --example check
+//! ```
+//!
+//! Cada operacao e executada e seu resultado (PASS/FAIL/SKIP) e
+//! registrado. Ao final, um resumo consolidado e exibido.
 
 use std::env;
 use std::fmt;
 use std::sync::atomic::{AtomicU32, Ordering};
 
+use tracing_subscriber::EnvFilter;
 use redmine_wrapper::core::config::RedmineConfigBuilder;
 use redmine_wrapper::core::errors::RedmineError;
 use redmine_wrapper::types::base::RedmineId;
@@ -73,9 +75,10 @@ macro_rules! section {
     };
 }
 
-fn main() {
+#[tokio::main]
+async fn main() {
     if env::var("RUST_LOG").is_ok() {
-        env_logger::init();
+        tracing_subscriber::fmt().with_env_filter(EnvFilter::from_default_env()).init();
     }
 
     let base_url = env::var("REDMINE_URL").expect("REDMINE_URL não definida");
@@ -100,7 +103,7 @@ fn main() {
     // ────────────────────────────────────────────
     section!("my_account");
     {
-        match client.my_account.get() {
+        match client.my_account.get().await {
             Ok(a) => ok("my_account.get", format_args!("#{} {} {}", a.id, a.firstname.as_deref().unwrap_or("?"), a.lastname.as_deref().unwrap_or("?"))),
             Err(RedmineError::Api { ref category, .. }) if category.http_status() == 403 => skip("my_account.get", "sem permissão (403) — token pode ser anônimo"),
             Err(e) => fail("my_account.get", e),
@@ -112,16 +115,16 @@ fn main() {
     // ────────────────────────────────────────────
     section!("projects");
     {
-        match client.projects.list() {
+        match client.projects.list().await {
             Ok(list) => {
                 ok("projects.list", format_args!("{} projeto(s)", list.len()));
                 if let Some(p) = list.first() {
                     let pid = p.id;
-                    match client.projects.get(pid) {
+                    match client.projects.get(pid).await {
                         Ok(p2) => ok("projects.get", format_args!("#{} {}", p2.id, p2.name.as_deref().unwrap_or("?"))),
                         Err(e) => fail("projects.get", e),
                     }
-                    match client.projects.get_with_includes(pid, &["trackers", "issue_categories"]) {
+                    match client.projects.get_with_includes(pid, &["trackers", "issue_categories"]).await {
                         Ok(p2) => ok("projects.get_with_includes", format_args!("#{} com includes", p2.id)),
                         Err(e) => fail("projects.get_with_includes", e),
                     }
@@ -140,21 +143,21 @@ fn main() {
     // ────────────────────────────────────────────
     section!("users");
     {
-        match client.users.get_current() {
+        match client.users.get_current().await {
             Ok(u) => ok("users.get_current", format_args!("#{} {} {}", u.id, u.firstname.as_deref().unwrap_or("?"), u.lastname.as_deref().unwrap_or("?"))),
             Err(RedmineError::Api { ref category, .. }) if category.http_status() == 403 => skip("users.get_current", "sem permissão (403)"),
             Err(e) => fail("users.get_current", e),
         }
-        match client.users.list(None) {
+        match client.users.list(None).await {
             Ok(list) => {
                 ok("users.list", format_args!("{} usuário(s)", list.len()));
                 if let Some(u) = list.first() {
                     let uid = u.id;
-                    match client.users.get(uid) {
+                    match client.users.get(uid).await {
                         Ok(u2) => ok("users.get", format_args!("#{} {}", u2.id, u2.login.as_deref().unwrap_or("?"))),
                         Err(e) => fail("users.get", e),
                     }
-                    match client.users.get_with_includes(uid, &["memberships", "groups"]) {
+                    match client.users.get_with_includes(uid, &["memberships", "groups"]).await {
                         Ok(u2) => ok("users.get_with_includes", format_args!("#{} com includes", u2.id)),
                         Err(e) => fail("users.get_with_includes", e),
                     }
@@ -175,21 +178,21 @@ fn main() {
     // ────────────────────────────────────────────
     section!("issues");
     {
-        match client.issues.list(None) {
+        match client.issues.list(None).await {
             Ok(list) => {
                 ok("issues.list", format_args!("{} issue(s)", list.len()));
                 if let Some(iss) = list.first() {
                     let iid = iss.id;
                     first_issue_id = Some(iid);
-                    match client.issues.get(iid) {
+                    match client.issues.get(iid).await {
                         Ok(i) => ok("issues.get", format_args!("#{} {}", i.id, i.subject.as_deref().unwrap_or("?"))),
                         Err(e) => fail("issues.get", e),
                     }
-                    match client.issues.get_with_includes(iid, &["journals", "attachments", "relations"]) {
+                    match client.issues.get_with_includes(iid, &["journals", "attachments", "relations"]).await {
                         Ok(i) => ok("issues.get_with_includes", format_args!("#{} com includes", i.id)),
                         Err(e) => fail("issues.get_with_includes", e),
                     }
-                    match client.issues.get_allowed_statuses(iid) {
+                    match client.issues.get_allowed_statuses(iid).await {
                         Ok(statuses) => ok("issues.get_allowed_statuses", format_args!("{} status(is) permitido(s)", statuses.len())),
                         Err(e) => fail("issues.get_allowed_statuses", e),
                     }
@@ -207,7 +210,7 @@ fn main() {
             status_id: Some("open".into()),
             ..Default::default()
         };
-        match client.issues.list(Some(&filter)) {
+        match client.issues.list(Some(&filter)).await {
             Ok(list) => ok("issues.list (filtro open)", format_args!("{} issue(s) abertas", list.len())),
             Err(e) => fail("issues.list (filtro open)", e),
         }
@@ -218,11 +221,11 @@ fn main() {
     // ────────────────────────────────────────────
     section!("time_entries");
     {
-        match client.time_entries.list(None) {
+        match client.time_entries.list(None).await {
             Ok(list) => {
                 ok("time_entries.list", format_args!("{} apontamento(s)", list.len()));
                 if let Some(te) = list.first() {
-                    match client.time_entries.get(te.id) {
+                    match client.time_entries.get(te.id).await {
                         Ok(t) => ok("time_entries.get", format_args!("#{} {:.1}h", t.id, t.hours.unwrap_or(0.0))),
                         Err(e) => fail("time_entries.get", e),
                     }
@@ -239,7 +242,7 @@ fn main() {
             to: Some("2030-12-31".into()),
             ..Default::default()
         };
-        match client.time_entries.list(Some(&filter)) {
+        match client.time_entries.list(Some(&filter)).await {
             Ok(list) => ok("time_entries.list (filtro período)", format_args!("{} apontamento(s)", list.len())),
             Err(e) => fail("time_entries.list (filtro período)", e),
         }
@@ -251,7 +254,7 @@ fn main() {
     section!("journals");
     {
         if let Some(iid) = first_issue_id {
-            match client.issues.get_with_includes(iid, &["journals"]) {
+            match client.issues.get_with_includes(iid, &["journals"]).await {
                 Ok(i) => {
                     let count = i.journals.as_ref().map(|j| j.len()).unwrap_or(0);
                     if count > 0 {
@@ -273,7 +276,7 @@ fn main() {
     section!("relations");
     {
         if let Some(iid) = first_issue_id {
-            match client.relations.list_by_issue(iid) {
+            match client.relations.list_by_issue(iid).await {
                 Ok(rels) => ok("relations.list_by_issue", format_args!("{} relação(ões) na issue #{}", rels.len(), iid)),
                 Err(e) => fail("relations.list_by_issue", e),
             }
@@ -288,11 +291,11 @@ fn main() {
     section!("attachments");
     {
         if let Some(iid) = first_issue_id {
-            match client.issues.get_with_includes(iid, &["attachments"]) {
+            match client.issues.get_with_includes(iid, &["attachments"]).await {
                 Ok(i) => {
                     if let Some(atts) = i.attachments {
                         if let Some(a) = atts.first() {
-                            match client.attachments.get(a.id) {
+                            match client.attachments.get(a.id).await {
                                 Ok(att) => ok("attachments.get", format_args!("#{} ({})", a.id, att.filename.as_deref().unwrap_or("?"))),
                                 Err(e) => fail("attachments.get", e),
                             }
@@ -315,27 +318,26 @@ fn main() {
     // ────────────────────────────────────────────
     section!("wiki");
     {
-        match client.projects.list() {
+        match client.projects.list().await {
             Ok(projects) => {
                 if let Some(p) = projects.first() {
                     let pid = p.id;
-                    match client.wiki.list(pid) {
+                    match client.wiki.list(pid).await {
                         Ok(pages) => {
                             ok("wiki.list", format_args!("{} página(s) no projeto #{}", pages.len(), pid));
                             if let Some(wp) = pages.first() {
-                                match client.wiki.get(pid, &wp.title, None) {
+                                match client.wiki.get(pid, &wp.title, None).await {
                                     Ok(page) => ok("wiki.get", format_args!("'{}' (v{})", page.title.as_deref().unwrap_or("?"), page.version.unwrap_or(0))),
                                     Err(e) => fail("wiki.get", e),
                                 }
-                                match client.wiki.get(pid, &wp.title, Some(&["attachments"])) {
+                                match client.wiki.get(pid, &wp.title, Some(&["attachments"])).await {
                                     Ok(page) => ok("wiki.get (com includes)", format_args!("'{}' c/ anexos", page.title.as_deref().unwrap_or("?"))),
                                     Err(e) => fail("wiki.get (com includes)", e),
                                 }
                                 // Tenta acessar versão 1 da página
-                                match client.wiki.get_version(pid, &wp.title, 1) {
+                                match client.wiki.get_version(pid, &wp.title, 1).await {
                                     Ok(page) => ok("wiki.get_version", format_args!("'{}' v1", page.title.as_deref().unwrap_or("?"))),
                                     Err(e) => {
-                                        // Pode ser que a versão 1 não exista — não consideramos FAIL
                                         skip("wiki.get_version", format_args!("versão 1 não acessível: {e}"));
                                     }
                                 }
@@ -366,15 +368,15 @@ fn main() {
     // ────────────────────────────────────────────
     section!("versions");
     {
-        match client.projects.list() {
+        match client.projects.list().await {
             Ok(projects) => {
                 if let Some(p) = projects.first() {
                     let pid = p.id;
-                    match client.versions.list_by_project(pid) {
+                    match client.versions.list_by_project(pid).await {
                         Ok(list) => {
                             ok("versions.list_by_project", format_args!("{} versão(ões)", list.len()));
                             if let Some(v) = list.first() {
-                                match client.versions.get(v.id) {
+                                match client.versions.get(v.id).await {
                                     Ok(v2) => ok("versions.get", format_args!("#{} {}", v2.id, v2.name.as_deref().unwrap_or("?"))),
                                     Err(e) => fail("versions.get", e),
                                 }
@@ -401,15 +403,15 @@ fn main() {
     // ────────────────────────────────────────────
     section!("enumerations");
     {
-        match client.enumerations.list_issue_priorities() {
+        match client.enumerations.list_issue_priorities().await {
             Ok(list) => ok("enumerations.list_issue_priorities", format_args!("{} prioridade(s)", list.len())),
             Err(e) => fail("enumerations.list_issue_priorities", e),
         }
-        match client.enumerations.list_time_entry_activities() {
+        match client.enumerations.list_time_entry_activities().await {
             Ok(list) => ok("enumerations.list_time_entry_activities", format_args!("{} atividade(s)", list.len())),
             Err(e) => fail("enumerations.list_time_entry_activities", e),
         }
-        match client.enumerations.list_document_categories() {
+        match client.enumerations.list_document_categories().await {
             Ok(list) => ok("enumerations.list_document_categories", format_args!("{} categoria(s) de documento", list.len())),
             Err(e) => fail("enumerations.list_document_categories", e),
         }
@@ -420,7 +422,7 @@ fn main() {
     // ────────────────────────────────────────────
     section!("trackers");
     {
-        match client.trackers.list() {
+        match client.trackers.list().await {
             Ok(list) => ok("trackers.list", format_args!("{} tracker(s)", list.len())),
             Err(e) => fail("trackers.list", e),
         }
@@ -431,7 +433,7 @@ fn main() {
     // ────────────────────────────────────────────
     section!("issue_statuses");
     {
-        match client.issue_statuses.list() {
+        match client.issue_statuses.list().await {
             Ok(list) => ok("issue_statuses.list", format_args!("{} status", list.len())),
             Err(e) => fail("issue_statuses.list", e),
         }
@@ -442,15 +444,15 @@ fn main() {
     // ────────────────────────────────────────────
     section!("issue_categories");
     {
-        match client.projects.list() {
+        match client.projects.list().await {
             Ok(projects) => {
                 if let Some(p) = projects.first() {
                     let pid = p.id;
-                    match client.issue_categories.list_by_project(pid) {
+                    match client.issue_categories.list_by_project(pid).await {
                         Ok(list) => {
                             ok("issue_categories.list_by_project", format_args!("{} categoria(s)", list.len()));
                             if let Some(c) = list.first() {
-                                match client.issue_categories.get(c.id) {
+                                match client.issue_categories.get(c.id).await {
                                     Ok(cat) => ok("issue_categories.get", format_args!("#{} {}", cat.id, cat.name.as_deref().unwrap_or("?"))),
                                     Err(e) => fail("issue_categories.get", e),
                                 }
@@ -477,15 +479,15 @@ fn main() {
     // ────────────────────────────────────────────
     section!("memberships");
     {
-        match client.projects.list() {
+        match client.projects.list().await {
             Ok(projects) => {
                 if let Some(p) = projects.first() {
                     let pid = p.id;
-                    match client.memberships.list_by_project(pid) {
+                    match client.memberships.list_by_project(pid).await {
                         Ok(list) => {
                             ok("memberships.list_by_project", format_args!("{} associação(ões)", list.len()));
                             if let Some(m) = list.first() {
-                                match client.memberships.get(m.id) {
+                                match client.memberships.get(m.id).await {
                                     Ok(_) => ok("memberships.get", format_args!("#{}", m.id)),
                                     Err(e) => fail("memberships.get", e),
                                 }
@@ -512,11 +514,11 @@ fn main() {
     // ────────────────────────────────────────────
     section!("roles");
     {
-        match client.roles.list() {
+        match client.roles.list().await {
             Ok(list) => {
                 ok("roles.list", format_args!("{} papel(éis)", list.len()));
                 if let Some(r) = list.first() {
-                    match client.roles.get(r.id) {
+                    match client.roles.get(r.id).await {
                         Ok(role) => ok("roles.get", format_args!("#{} {}", role.id, role.name.as_deref().unwrap_or("?"))),
                         Err(e) => fail("roles.get", e),
                     }
@@ -534,16 +536,16 @@ fn main() {
     // ────────────────────────────────────────────
     section!("groups");
     {
-        match client.groups.list() {
+        match client.groups.list().await {
             Ok(list) => {
                 ok("groups.list", format_args!("{} grupo(s)", list.len()));
                 if let Some(g) = list.first() {
                     let gid = g.id;
-                    match client.groups.get(gid) {
+                    match client.groups.get(gid).await {
                         Ok(g2) => ok("groups.get", format_args!("#{} {}", g2.id, g2.name.as_deref().unwrap_or("?"))),
                         Err(e) => fail("groups.get", e),
                     }
-                    match client.groups.get_with_includes(gid, &["users", "memberships"]) {
+                    match client.groups.get_with_includes(gid, &["users", "memberships"]).await {
                         Ok(g2) => ok("groups.get_with_includes", format_args!("#{} com includes", g2.id)),
                         Err(e) => fail("groups.get_with_includes", e),
                     }
@@ -562,7 +564,7 @@ fn main() {
     // ────────────────────────────────────────────
     section!("custom_fields");
     {
-        match client.custom_fields.list() {
+        match client.custom_fields.list().await {
             Ok(list) => ok("custom_fields.list", format_args!("{} campo(s)", list.len())),
             Err(ref e) if is_auth_err(e) => skip("custom_fields.list", "sem permissão — requer admin"),
             Err(e) => fail("custom_fields.list", e),
@@ -574,7 +576,7 @@ fn main() {
     // ────────────────────────────────────────────
     section!("queries");
     {
-        match client.queries.list() {
+        match client.queries.list().await {
             Ok(list) => ok("queries.list", format_args!("{} consulta(s)", list.len())),
             Err(e) => fail("queries.list", e),
         }
@@ -585,11 +587,11 @@ fn main() {
     // ────────────────────────────────────────────
     section!("files");
     {
-        match client.projects.list() {
+        match client.projects.list().await {
             Ok(projects) => {
                 if let Some(p) = projects.first() {
                     let pid = p.id;
-                    match client.files.list_by_project(pid) {
+                    match client.files.list_by_project(pid).await {
                         Ok(list) => ok("files.list_by_project", format_args!("{} arquivo(s)", list.len())),
                         Err(ref e) if is_auth_err(e) => skip("files.list_by_project", "sem permissão"),
                         Err(e) => fail("files.list_by_project", e),
@@ -626,7 +628,7 @@ fn main() {
             open_issues: None,
             attachments: None,
         };
-        match client.search.search(&filter) {
+        match client.search.search(&filter).await {
             Ok(list) => ok("search.search", format_args!("{} resultado(s)", list.len())),
             Err(RedmineError::Api { ref category, .. }) if category.http_status() == 403 => skip("search.search", "sem permissão (403)"),
             Err(e) => fail("search.search", e),
@@ -638,11 +640,11 @@ fn main() {
     // ────────────────────────────────────────────
     section!("news");
     {
-        match client.news.list() {
+        match client.news.list().await {
             Ok(list) => {
                 ok("news.list", format_args!("{} notícia(s)", list.len()));
                 if let Some(n) = list.first() {
-                    match client.news.get(n.id) {
+                    match client.news.get(n.id).await {
                         Ok(_) => ok("news.get", format_args!("#{}", n.id)),
                         Err(e) => fail("news.get", e),
                     }
@@ -653,10 +655,10 @@ fn main() {
             Err(RedmineError::Api { ref category, .. }) if category.http_status() == 403 => skip("news.list", "sem permissão (403)"),
             Err(e) => fail("news.list", e),
         }
-        match client.projects.list() {
+        match client.projects.list().await {
             Ok(projects) => {
                 if let Some(p) = projects.first() {
-                    match client.news.list_by_project(p.id) {
+                    match client.news.list_by_project(p.id).await {
                         Ok(list) => ok("news.list_by_project", format_args!("{} notícia(s) no projeto #{}", list.len(), p.id)),
                         Err(RedmineError::Api { ref category, .. }) if category.http_status() == 403 => skip("news.list_by_project", "sem permissão (403)"),
                         Err(e) => fail("news.list_by_project", e),

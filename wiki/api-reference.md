@@ -5,18 +5,17 @@
 ```
 redmine_wrapper (lib)
 ├── lib.rs              # Re-exports públicos
-├── client/             # RedmineClient + ResourceGroup
+├── client/             # RedmineClient (22 resources como campos diretos)
 ├── core/               # Config, erros, constantes
-├── http/               # HTTP client, paginação, rate limiter
+├── http/               # HTTP client async, paginação, rate limiter
 ├── resources/          # 22 recursos (1 por domínio)
 ├── types/              # 22 módulos de tipos serde
 └── utils/              # Utilitários (filtros, query helpers)
 ```
 
-A biblioteca segue o padrão de **ResourceGroup**: `RedmineClient` faz
-`Deref` para `ResourceGroup`, que expõe todos os recursos como campos
-públicos. Cada recurso contém métodos que mapeiam 1:1 com endpoints da
-API do Redmine.
+A biblioteca expõe 22 resources como campos públicos diretos no
+`RedmineClient`. Cada resource contém métodos `async` que mapeiam
+1:1 com endpoints da API do Redmine.
 
 ---
 
@@ -28,15 +27,24 @@ API do Redmine.
 pub struct RedmineConfig {
     pub base_url: String,                    // URL base (ex: https://redmine.exemplo.com)
     pub token: Option<String>,               // Chave de API
-    pub auth_method: Option<AuthMethod>,     // Método de autenticação
+    pub auth_method: AuthMethod,             // Método de autenticação
     pub switch_user: Option<String>,         // Impersonação (admin)
-    pub timeout: Option<Duration>,           // Timeout HTTP
-    pub max_rps: Option<u32>,                // Rate limiting (req/s)
+    pub timeout: Duration,                   // Timeout HTTP (padrão: 30s)
+    pub max_rps: u32,                        // Rate limiting (padrão: 10 req/s)
 }
 ```
 
-Configuração fornecida pelo usuário. Use o builder (`RedmineConfigBuilder`)
-para construir — ele valida `base_url` e tem métodos nomeados para cada campo.
+Construída via builder (`RedmineConfigBuilder`) ou diretamente:
+
+```rust,ignore
+use redmine_wrapper::core::config::RedmineConfig;
+
+let config = RedmineConfig {
+    base_url: "https://redmine.exemplo.com".into(),
+    token: Some("sua-chave".into()),
+    ..Default::default()
+};
+```
 
 ### `RedmineConfigBuilder`
 
@@ -54,8 +62,6 @@ impl RedmineConfigBuilder {
 }
 ```
 
-Uso obrigatório do builder (única forma recomendada):
-
 ```rust,ignore
 use redmine_wrapper::RedmineConfigBuilder;
 
@@ -65,22 +71,6 @@ let config = RedmineConfigBuilder::default()
     .build()?;
 ```
 
-### `ResolvedConfig`
-
-```rust,ignore
-pub struct ResolvedConfig {
-    pub base_url: String,
-    pub token: Option<String>,
-    pub auth_method: AuthMethod,
-    pub switch_user: Option<String>,
-    pub timeout: Duration,        // Padrão: 30s
-    pub max_rps: u32,             // Padrão: 10 req/s
-}
-```
-
-Gerada internamente por `ResolvedConfig::from_config(&RedmineConfig)`.
-Normaliza a URL (remove barra final) e aplica valores padrão.
-
 ### `AuthMethod`
 
 ```rust,ignore
@@ -88,8 +78,6 @@ pub enum AuthMethod {
     Header,     // X-Redmine-API-Key (único suportado)
 }
 ```
-
-Enum preparado para expansão futura. Atualmente apenas `Header` é válido.
 
 ---
 
@@ -152,7 +140,7 @@ pub struct ErrorContext {
 
 ---
 
-## HTTP Client
+## HTTP Client (internal)
 
 ### `HttpClient` (privado)
 
@@ -168,8 +156,8 @@ pub struct ErrorContext {
 | `get_paginated<T>(path, item_key, params, op)` | GET paginado, retorna `(Vec<T>, u32)` |
 | `get_all_paginated<T>(path, item_key, query, op)` | Auto-paginado (todas as páginas) |
 
-Todos os métodos públicos usam `operation` como identificador para logging
-e rastreamento (ex: `"issues.list"`, `"projects.get"`).
+Todos os métodos são `async` e usam `operation` como identificador
+para tracing/rastreio (ex: `"issues.list"`, `"projects.get"`).
 
 ---
 
@@ -179,7 +167,7 @@ e rastreamento (ex: `"issues.list"`, `"projects.get"`).
 
 | Método | Endpoint | Status |
 |--------|----------|--------|
-| `list(filter, pagination)` | `GET /issues.json` | Stable |
+| `list(filter)` | `GET /issues.json` | Stable |
 | `get(id)` | `GET /issues/{id}.json` | Stable |
 | `get_with_includes(id, includes)` | `GET /issues/{id}.json?include=` | Stable |
 | `get_allowed_statuses(id)` | `GET /issues/{id}.json?include=allowed_statuses` | Stable |
@@ -193,7 +181,7 @@ e rastreamento (ex: `"issues.list"`, `"projects.get"`).
 
 | Método | Endpoint | Status |
 |--------|----------|--------|
-| `list(pagination)` | `GET /projects.json` | Stable |
+| `list()` | `GET /projects.json` | Stable |
 | `get(id)` | `GET /projects/{id}.json` | Stable |
 | `get_with_includes(id, includes)` | `GET /projects/{id}.json?include=` | Stable |
 | `create(request)` | `POST /projects.json` | Stable |
@@ -206,7 +194,7 @@ e rastreamento (ex: `"issues.list"`, `"projects.get"`).
 
 | Método | Endpoint | Status |
 |--------|----------|--------|
-| `list(pagination)` | `GET /users.json` | Stable |
+| `list(filter)` | `GET /users.json` | Stable |
 | `get(id)` | `GET /users/{id}.json` | Stable |
 | `get_with_includes(id, includes)` | `GET /users/{id}.json?include=` | Stable |
 | `get_current()` | `GET /users/current.json` | Stable |
@@ -218,7 +206,7 @@ e rastreamento (ex: `"issues.list"`, `"projects.get"`).
 
 | Método | Endpoint | Status |
 |--------|----------|--------|
-| `list(project_id, pagination)` | `GET /time_entries.json` | Stable |
+| `list(filter)` | `GET /time_entries.json` | Stable |
 | `get(id)` | `GET /time_entries/{id}.json` | Stable |
 | `create(request)` | `POST /time_entries.json` | Stable |
 | `update(id, request)` | `PUT /time_entries/{id}.json` | Stable |
@@ -230,7 +218,7 @@ e rastreamento (ex: `"issues.list"`, `"projects.get"`).
 |--------|----------|--------|
 | `get(id)` | `GET /attachments/{id}.json` | Beta |
 | `delete(id)` | `DELETE /attachments/{id}.json` | Beta |
-| `upload(filename, data, content_type)` | `POST /uploads.json` | Beta |
+| `upload(filename, data)` | `POST /uploads.json` | Beta |
 
 ### JournalsResource
 
@@ -256,7 +244,7 @@ e rastreamento (ex: `"issues.list"`, `"projects.get"`).
 | Método | Endpoint | Status |
 |--------|----------|--------|
 | `list(project_id)` | `GET /projects/{id}/wiki/index.json` | Alpha |
-| `get(project_id, title)` | `GET /projects/{id}/wiki/{title}.json` | Alpha |
+| `get(project_id, title, includes)` | `GET /projects/{id}/wiki/{title}.json` | Alpha |
 | `get_version(project_id, title, version)` | `GET /projects/{id}/wiki/{title}/{v}.json` | Alpha |
 | `create_or_update(project_id, title, request)` | `PUT /projects/{id}/wiki/{title}.json` | Alpha |
 | `delete(project_id, title)` | `DELETE /projects/{id}/wiki/{title}.json` | Alpha |
@@ -299,7 +287,7 @@ e rastreamento (ex: `"issues.list"`, `"projects.get"`).
 | `get(id)` | `GET /issue_categories/{id}.json` | Alpha |
 | `create(project_id, request)` | `POST /projects/{id}/issue_categories.json` | Alpha |
 | `update(id, request)` | `PUT /issue_categories/{id}.json` | Alpha |
-| `delete(id)` | `DELETE /issue_categories/{id}.json` | Alpha |
+| `delete(id, reassign_to_id)` | `DELETE /issue_categories/{id}.json` | Alpha |
 
 ### MembershipsResource
 
@@ -354,7 +342,7 @@ e rastreamento (ex: `"issues.list"`, `"projects.get"`).
 
 | Método | Endpoint | Status |
 |--------|----------|--------|
-| `search(query, scope)` | `GET /search.json` | Alpha |
+| `search(filter)` | `GET /search.json` | Alpha |
 
 ### NewsResource
 
@@ -363,7 +351,7 @@ e rastreamento (ex: `"issues.list"`, `"projects.get"`).
 | `list()` | `GET /news.json` | Alpha |
 | `list_by_project(project_id)` | `GET /projects/{id}/news.json` | Alpha |
 | `get(id)` | `GET /news/{id}.json` | Alpha |
-| `create(request)` | `POST /news.json` | Alpha |
+| `create(project_id, request)` | `POST /news.json` | Alpha |
 | `update(id, request)` | `PUT /news/{id}.json` | Alpha |
 | `delete(id)` | `DELETE /news/{id}.json` | Alpha |
 
@@ -383,28 +371,28 @@ de um domínio da API. Todos os tipos implementam `Debug`, `Clone`,
 
 | Módulo | Tipos principais | Descrição |
 |--------|-----------------|-----------|
-| `base` | `RedmineId`, `IdName`, `CustomFieldValue`, `UploadToken`, `Upload` | Tipos fundamentais reutilizados |
-| `issue` | `Issue`, `IssueFilter`, `CreateIssueRequest`, `UpdateIssueRequest`, `IssueStatus` | Issues e filtros |
-| `project` | `Project`, `CreateProjectRequest`, `UpdateProjectRequest` | Projetos |
-| `user` | `User`, `CreateUserRequest`, `UpdateUserRequest`, `UserGroup` | Usuários e grupos |
-| `time_entry` | `TimeEntry`, `CreateTimeEntryRequest`, `UpdateTimeEntryRequest` | Apontamentos de horas |
-| `journal` | `Journal`, `JournalDetail`, `JournalUpdateRequest` | Histórico de alterações |
-| `relation` | `Relation`, `CreateRelationRequest` | Relações entre issues |
-| `attachment` | `Attachment`, `AttachmentUpload` | Anexos |
-| `wiki` | `WikiPage`, `WikiPageDetail`, `WikiPagePayload` | Páginas wiki |
-| `version` | `Version`, `CreateVersionRequest`, `UpdateVersionRequest` | Versões |
+| `base` | `RedmineId`, `IdName`, `CustomFieldValue`, `UploadToken`, `UploadPayload` | Tipos fundamentais reutilizados |
+| `issue` | `Issue`, `IssueFilter`, `CreateIssuePayload`, `UpdateIssuePayload`, `AllowedStatus` | Issues e filtros |
+| `project` | `Project`, `CreateProjectPayload`, `UpdateProjectPayload` | Projetos |
+| `user` | `User`, `UserFilter`, `CreateUserPayload`, `UpdateUserPayload` | Usuários |
+| `time_entry` | `TimeEntry`, `TimeEntryFilter`, `CreateTimeEntryPayload`, `UpdateTimeEntryPayload` | Apontamentos de horas |
+| `journal` | `Journal`, `JournalDetail`, `UpdateJournalPayload` | Histórico de alterações |
+| `relation` | `Relation`, `CreateRelationPayload` | Relações entre issues |
+| `attachment` | `Attachment` | Anexos |
+| `wiki` | `WikiPage`, `WikiPageSummary`, `CreateWikiPagePayload` | Páginas wiki |
+| `version` | `Version`, `CreateVersionPayload`, `UpdateVersionPayload` | Versões |
 | `enumeration` | `IssuePriority`, `TimeEntryActivity`, `DocumentCategory` | Enumerações (listas fixas) |
 | `tracker` | `Tracker` | Trackers (tipos de issue) |
 | `issue_status` | `IssueStatus` | Status de issue |
-| `issue_category` | `IssueCategory`, `CreateIssueCategoryRequest` | Categorias de issue |
-| `membership` | `Membership`, `CreateMembershipRequest`, `UpdateMembershipRequest` | Associações projeto-usuário |
-| `role` | `Role`, `RolePermission` | Papéis e permissões |
-| `group` | `Group`, `GroupUser` | Grupos de usuários |
+| `issue_category` | `IssueCategory`, `CreateIssueCategoryPayload` | Categorias de issue |
+| `membership` | `Membership`, `CreateMembershipPayload`, `UpdateMembershipPayload` | Associações projeto-usuário |
+| `role` | `Role` | Papéis e permissões |
+| `group` | `Group`, `CreateGroupPayload`, `UpdateGroupPayload` | Grupos de usuários |
 | `custom_field` | `CustomField` | Campos personalizados |
-| `query` | `Query`, `QueryFilter` | Consultas salvas |
-| `file` | `File`, `FileUploadRequest` | Arquivos de projeto |
-| `search` | `SearchResult`, `SearchQuery` | Resultados de busca textual |
-| `news` | `News`, `CreateNewsRequest`, `UpdateNewsRequest` | Notícias |
+| `query` | `Query` | Consultas salvas |
+| `file` | `File`, `CreateFilePayload` | Arquivos de projeto |
+| `search` | `SearchResult`, `SearchFilter` | Resultados de busca textual |
+| `news` | `News`, `CreateNewsPayload`, `UpdateNewsPayload` | Notícias |
 | `my_account` | `MyAccount` | Conta do usuário atual |
 
 ---

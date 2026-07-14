@@ -27,12 +27,11 @@ impl MembershipsResource {
     ///
     /// # Exemplo
     /// ```rust,ignore
-    /// let memberships = client.memberships.list_by_project(1)?;
+    /// let memberships = client.memberships.list_by_project(1).await?;
     /// ```
-    #[must_use]
-    pub fn list_by_project(&self, project_id: RedmineId) -> Result<Vec<Membership>, RedmineError> {
+    pub async fn list_by_project(&self, project_id: RedmineId) -> Result<Vec<Membership>, RedmineError> {
         let path = format!("/projects/{}/memberships.json", project_id);
-        let (items, _total) = self.http.get_paginated(&path, "memberships", None, &[], "memberships.list_by_project")?;
+        let (items, _total) = self.http.get_paginated(&path, "memberships", None, &[], "memberships.list_by_project").await?;
         Ok(items)
     }
 
@@ -43,12 +42,11 @@ impl MembershipsResource {
     ///
     /// # Exemplo
     /// ```rust,ignore
-    /// let membership = client.memberships.get(15)?;
+    /// let membership = client.memberships.get(15).await?;
     /// ```
-    #[must_use]
-    pub fn get(&self, id: RedmineId) -> Result<Membership, RedmineError> {
+    pub async fn get(&self, id: RedmineId) -> Result<Membership, RedmineError> {
         let path = format!("/memberships/{}.json", id);
-        self.http.get_single(&path, "membership", &[], "memberships.get")
+        self.http.get_single(&path, "membership", &[], "memberships.get").await
     }
 
     /// Cria uma associação em um projeto.
@@ -60,13 +58,12 @@ impl MembershipsResource {
     /// # Exemplo
     /// ```rust,ignore
     /// let payload = CreateMembershipPayload { user_id: Some(10), role_ids: vec![3] };
-    /// let membership = client.memberships.create(1, &payload)?;
+    /// let membership = client.memberships.create(1, &payload).await?;
     /// ```
-    #[must_use]
-    pub fn create(&self, project_id: RedmineId, payload: &CreateMembershipPayload) -> Result<Membership, RedmineError> {
+    pub async fn create(&self, project_id: RedmineId, payload: &CreateMembershipPayload) -> Result<Membership, RedmineError> {
         let path = format!("/projects/{}/memberships.json", project_id);
         let body = serde_json::json!({ "membership": payload });
-        self.http.post_single(&path, "membership", &body, "memberships.create")
+        self.http.post_single(&path, "membership", &body, "memberships.create").await
     }
 
     /// Atualiza uma associação.
@@ -78,13 +75,12 @@ impl MembershipsResource {
     /// # Exemplo
     /// ```rust,ignore
     /// let payload = UpdateMembershipPayload { role_ids: Some(vec![4, 5]) };
-    /// client.memberships.update(15, &payload)?;
+    /// client.memberships.update(15, &payload).await?;
     /// ```
-    #[must_use]
-    pub fn update(&self, id: RedmineId, payload: &UpdateMembershipPayload) -> Result<(), RedmineError> {
+    pub async fn update(&self, id: RedmineId, payload: &UpdateMembershipPayload) -> Result<(), RedmineError> {
         let path = format!("/memberships/{}.json", id);
         let body = serde_json::json!({ "membership": payload });
-        self.http.put::<serde_json::Value, _>(&path, &body, "memberships.update")?;
+        self.http.put::<serde_json::Value, _>(&path, &body, "memberships.update").await?;
         Ok(())
     }
 
@@ -95,11 +91,10 @@ impl MembershipsResource {
     ///
     /// # Exemplo
     /// ```rust,ignore
-    /// client.memberships.delete(15)?;
+    /// client.memberships.delete(15).await?;
     /// ```
-    #[must_use]
-    pub fn delete(&self, id: RedmineId) -> Result<(), RedmineError> {
+    pub async fn delete(&self, id: RedmineId) -> Result<(), RedmineError> {
         let path = format!("/memberships/{}.json", id);
-        self.http.delete(&path, &[], "memberships.delete")
+        self.http.delete(&path, &[], "memberships.delete").await
     }
 }

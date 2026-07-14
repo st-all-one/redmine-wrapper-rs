@@ -6,7 +6,7 @@
 
 ## Causa
 
-Conflito ao atualizar página wiki devido a versão desatualizada.
+Ocorre principalmente ao atualizar páginas wiki quando a versão no servidor difere da esperada.
 
 ## Exemplo
 
@@ -21,4 +21,4 @@ match result {
 
 ## Prevenção
 
-Sempre leia a versão atual da página wiki antes de atualizar.
+Recarregue o recurso antes de atualizar para obter a versão mais recente.

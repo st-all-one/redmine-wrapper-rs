@@ -28,10 +28,9 @@ impl SearchResource {
     /// # Exemplo
     /// ```rust,ignore
     /// let filter = SearchFilter { query: "bug".into(), issues: Some(true), ..Default::default() };
-    /// let results = client.search.search(&filter)?;
+    /// let results = client.search.search(&filter).await?;
     /// ```
-    #[must_use]
-    pub fn search(&self, filter: &SearchFilter) -> Result<Vec<SearchResult>, RedmineError> {
+    pub async fn search(&self, filter: &SearchFilter) -> Result<Vec<SearchResult>, RedmineError> {
         use crate::utils::query::filter_to_query;
         let base = filter_to_query(Some(filter));
         let query: Vec<(&str, String)> = base.iter().map(|(k, v)| (k.as_str(), v.clone())).collect();
@@ -40,7 +39,7 @@ impl SearchResource {
             offset: filter.offset,
             limit: filter.limit,
         };
-        let (items, _total) = self.http.get_paginated("/search.json", "results", Some(&params), &query, "search.search")?;
+        let (items, _total) = self.http.get_paginated("/search.json", "results", Some(&params), &query, "search.search").await?;
         Ok(items)
     }
 }

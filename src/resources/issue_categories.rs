@@ -27,12 +27,11 @@ impl IssueCategoriesResource {
     ///
     /// # Exemplo
     /// ```rust,ignore
-    /// let categories = client.issue_categories.list_by_project(1)?;
+    /// let categories = client.issue_categories.list_by_project(1).await?;
     /// ```
-    #[must_use]
-    pub fn list_by_project(&self, project_id: RedmineId) -> Result<Vec<IssueCategory>, RedmineError> {
+    pub async fn list_by_project(&self, project_id: RedmineId) -> Result<Vec<IssueCategory>, RedmineError> {
         let path = format!("/projects/{}/issue_categories.json", project_id);
-        let (items, _total) = self.http.get_paginated(&path, "issue_categories", None, &[], "issue_categories.list_by_project")?;
+        let (items, _total) = self.http.get_paginated(&path, "issue_categories", None, &[], "issue_categories.list_by_project").await?;
         Ok(items)
     }
 
@@ -43,12 +42,11 @@ impl IssueCategoriesResource {
     ///
     /// # Exemplo
     /// ```rust,ignore
-    /// let cat = client.issue_categories.get(7)?;
+    /// let cat = client.issue_categories.get(7).await?;
     /// ```
-    #[must_use]
-    pub fn get(&self, id: RedmineId) -> Result<IssueCategory, RedmineError> {
+    pub async fn get(&self, id: RedmineId) -> Result<IssueCategory, RedmineError> {
         let path = format!("/issue_categories/{}.json", id);
-        self.http.get_single(&path, "issue_category", &[], "issue_categories.get")
+        self.http.get_single(&path, "issue_category", &[], "issue_categories.get").await
     }
 
     /// Cria uma categoria em um projeto.
@@ -60,13 +58,12 @@ impl IssueCategoriesResource {
     /// # Exemplo
     /// ```rust,ignore
     /// let payload = CreateIssueCategoryPayload { name: "Bug".into() };
-    /// let cat = client.issue_categories.create(1, &payload)?;
+    /// let cat = client.issue_categories.create(1, &payload).await?;
     /// ```
-    #[must_use]
-    pub fn create(&self, project_id: RedmineId, payload: &CreateIssueCategoryPayload) -> Result<IssueCategory, RedmineError> {
+    pub async fn create(&self, project_id: RedmineId, payload: &CreateIssueCategoryPayload) -> Result<IssueCategory, RedmineError> {
         let path = format!("/projects/{}/issue_categories.json", project_id);
         let body = serde_json::json!({ "issue_category": payload });
-        self.http.post_single(&path, "issue_category", &body, "issue_categories.create")
+        self.http.post_single(&path, "issue_category", &body, "issue_categories.create").await
     }
 
     /// Atualiza uma categoria.
@@ -78,13 +75,12 @@ impl IssueCategoriesResource {
     /// # Exemplo
     /// ```rust,ignore
     /// let payload = UpdateIssueCategoryPayload { name: Some("Melhoria".into()) };
-    /// client.issue_categories.update(7, &payload)?;
+    /// client.issue_categories.update(7, &payload).await?;
     /// ```
-    #[must_use]
-    pub fn update(&self, id: RedmineId, payload: &UpdateIssueCategoryPayload) -> Result<(), RedmineError> {
+    pub async fn update(&self, id: RedmineId, payload: &UpdateIssueCategoryPayload) -> Result<(), RedmineError> {
         let path = format!("/issue_categories/{}.json", id);
         let body = serde_json::json!({ "issue_category": payload });
-        self.http.put::<serde_json::Value, _>(&path, &body, "issue_categories.update")?;
+        self.http.put::<serde_json::Value, _>(&path, &body, "issue_categories.update").await?;
         Ok(())
     }
 
@@ -97,17 +93,16 @@ impl IssueCategoriesResource {
     /// # Exemplo
     /// ```rust,ignore
     /// // Excluir sem reassinar
-    /// client.issue_categories.delete(7, None)?;
+    /// client.issue_categories.delete(7, None).await?;
     /// // Excluir e reassinar issues para a categoria 10
-    /// client.issue_categories.delete(7, Some(10))?;
+    /// client.issue_categories.delete(7, Some(10)).await?;
     /// ```
-    #[must_use]
-    pub fn delete(&self, id: RedmineId, reassign_to_id: Option<RedmineId>) -> Result<(), RedmineError> {
+    pub async fn delete(&self, id: RedmineId, reassign_to_id: Option<RedmineId>) -> Result<(), RedmineError> {
         let path = format!("/issue_categories/{}.json", id);
         let mut query = Vec::new();
         if let Some(v) = reassign_to_id {
             query.push(("reassign_to_id", v.to_string()));
         }
-        self.http.delete(&path, &query, "issue_categories.delete")
+        self.http.delete(&path, &query, "issue_categories.delete").await
     }
 }

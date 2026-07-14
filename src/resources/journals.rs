@@ -29,13 +29,12 @@ impl JournalsResource {
     /// # Exemplo
     /// ```rust,ignore
     /// let payload = UpdateJournalPayload { notes: "Nova anotação".into() };
-    /// client.journals.update(1, &payload)?;
+    /// client.journals.update(1, &payload).await?;
     /// ```
-    #[must_use]
-    pub fn update(&self, id: RedmineId, payload: &UpdateJournalPayload) -> Result<(), RedmineError> {
+    pub async fn update(&self, id: RedmineId, payload: &UpdateJournalPayload) -> Result<(), RedmineError> {
         let path = format!("/journals/{}.json", id);
         let body = serde_json::json!({ "journal": payload });
-        self.http.put::<serde_json::Value, _>(&path, &body, "journals.update")?;
+        self.http.put::<serde_json::Value, _>(&path, &body, "journals.update").await?;
         Ok(())
     }
 
@@ -46,13 +45,12 @@ impl JournalsResource {
     ///
     /// # Exemplo
     /// ```rust,ignore
-    /// client.journals.remove(1)?;
+    /// client.journals.remove(1).await?;
     /// ```
-    #[must_use]
-    pub fn remove(&self, id: RedmineId) -> Result<(), RedmineError> {
+    pub async fn remove(&self, id: RedmineId) -> Result<(), RedmineError> {
         let path = format!("/journals/{}.json", id);
         let body = serde_json::json!({ "journal": { "notes": "" } });
-        self.http.put::<serde_json::Value, _>(&path, &body, "journals.remove")?;
+        self.http.put::<serde_json::Value, _>(&path, &body, "journals.remove").await?;
         Ok(())
     }
 }

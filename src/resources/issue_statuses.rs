@@ -23,11 +23,10 @@ impl IssueStatusesResource {
     ///
     /// # Exemplo
     /// ```rust,ignore
-    /// let statuses = client.issue_statuses.list()?;
+    /// let statuses = client.issue_statuses.list().await?;
     /// ```
-    #[must_use]
-    pub fn list(&self) -> Result<Vec<IssueStatus>, RedmineError> {
-        let (items, _total) = self.http.get_paginated("/issue_statuses.json", "issue_statuses", None, &[], "issue_statuses.list")?;
+    pub async fn list(&self) -> Result<Vec<IssueStatus>, RedmineError> {
+        let (items, _total) = self.http.get_paginated("/issue_statuses.json", "issue_statuses", None, &[], "issue_statuses.list").await?;
         Ok(items)
     }
 }

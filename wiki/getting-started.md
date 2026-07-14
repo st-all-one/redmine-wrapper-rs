@@ -8,7 +8,8 @@ Adicione a dependência ao seu `Cargo.toml`:
 
 ```toml
 [dependencies]
-redmine-wrapper-rs = "0.1"
+redmine-wrapper-rs = "0.2"
+tokio = { version = "1", features = ["full"] }
 ```
 
 ### Feature flags
@@ -22,7 +23,7 @@ Para trocar para `native-tls`:
 
 ```toml
 [dependencies]
-redmine-wrapper-rs = { version = "0.1", default-features = false, features = ["native-tls"] }
+redmine-wrapper-rs = { version = "0.2", default-features = false, features = ["native-tls"] }
 ```
 
 ## Configuração
@@ -48,6 +49,18 @@ let config = RedmineConfigBuilder::default()
     .build()?;
 ```
 
+Também é possível construir a config diretamente:
+
+```rust,ignore
+use redmine_wrapper::core::config::RedmineConfig;
+
+let config = RedmineConfig {
+    base_url: "https://redmine.exemplo.com".into(),
+    token: Some("sua-chave-api".into()),
+    ..Default::default()
+};
+```
+
 ### Variáveis de ambiente
 
 | Variável        | Campo   | Descrição                     |
@@ -57,14 +70,15 @@ let config = RedmineConfigBuilder::default()
 
 ## Primeira chamada à API
 
-O ponto de entrada é `RedmineClient`. Todas as operações são síncronas (blocking).
-O acesso aos recursos é via `Deref` — use `client.projects`, `client.issues`, etc.
+O ponto de entrada é `RedmineClient`. Todas as operações são assíncronas.
+O acesso aos recursos é feito diretamente via campos do cliente:
+`client.projects`, `client.issues`, etc.
 
 ```rust,ignore
-use redmine_wrapper::RedmineClient;
-use redmine_wrapper::RedmineConfigBuilder;
+use redmine_wrapper::{RedmineClient, RedmineConfigBuilder};
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let client = RedmineClient::new(
         RedmineConfigBuilder::default()
             .base_url("https://redmine.exemplo.com")
@@ -73,13 +87,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     )?;
 
     // Lista projetos
-    let projetos = client.projects.list()?;
+    let projetos = client.projects.list().await?;
     for p in &projetos {
         println!("#{}: {} ({})", p.id, p.name.as_deref().unwrap_or("?"), p.identifier.as_deref().unwrap_or("?"));
     }
 
     // Dados do usuário autenticado
-    let account = client.my_account.get()?;
+    let account = client.my_account.get().await?;
     println!("Autenticado como: {} {}", account.firstname.as_deref().unwrap_or(""), account.lastname.as_deref().unwrap_or(""));
 
     Ok(())
@@ -91,18 +105,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 A crate define o enum `RedmineError` para todos os cenários de falha.
 
 ```rust,ignore
-use redmine_wrapper::RedmineClient;
 use redmine_wrapper::core::errors::RedmineError;
 
-fn listar_projetos(client: &RedmineClient) -> Result<(), RedmineError> {
-    match client.projects.list() {
+async fn listar_projetos(client: &RedmineClient) -> Result<(), RedmineError> {
+    match client.projects.list().await {
         Ok(projetos) => {
             println!("OK — {} projetos", projetos.len());
             Ok(())
         }
         Err(RedmineError::Api { category, detail, instance, .. }) => {
             eprintln!("Erro da API [{}]: {} (id: {})", category, detail, instance);
-            Err(RedmineError::Api { category, status: 0, detail: detail.clone(), instance: instance.clone(), context: Box::default() })
+            Err(RedmineError::api(category, 0, detail, Default::default()))
         }
         Err(e) => {
             eprintln!("Erro inesperado: {e}");
@@ -120,7 +133,7 @@ Não é necessário gerenciar `offset`/`limit` manualmente.
 
 ```rust,ignore
 // Todas as issues (várias requisições internas, se necessário)
-let todas = client.issues.list(None)?;
+let todas = client.issues.list(None).await?;
 println!("Total de issues: {}", todas.len());
 ```
 

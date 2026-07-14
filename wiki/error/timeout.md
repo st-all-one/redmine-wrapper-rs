@@ -2,18 +2,18 @@
 
 **Categoria:** `ErrorCategory::Timeout`
 **HTTP Status:** 504
-**Gatilho:** Requisição excedeu o tempo limite
+**Gatilho:** Tempo limite da requisição excedido
 
 ## Causa
 
-O servidor não respondeu dentro do período configurado.
+O servidor não respondeu dentro do prazo configurado no cliente.
 
 ## Exemplo
 
 ```rust,ignore
 match result {
-    Err(RedmineError::Api { category: ErrorCategory::Timeout, detail, instance, .. }) => {
-        eprintln!("{detail} (correlation: {instance})");
+    Err(RedmineError::Timeout { duration, .. }) => {
+        eprintln!("Timeout após {duration:?}");
     }
     _ => {}
 }
@@ -21,4 +21,4 @@ match result {
 
 ## Prevenção
 
-Ajuste o timeout com `timeout: Some(Duration::from_secs(120))` para operações lentas, ou verifique a conectividade de rede.
+Aumente o timeout com `timeout_secs()` no builder. Verifique a latência da rede e do servidor Redmine.

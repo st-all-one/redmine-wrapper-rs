@@ -27,12 +27,11 @@ impl FilesResource {
     ///
     /// # Exemplo
     /// ```rust,ignore
-    /// let files = client.files.list_by_project(1)?;
+    /// let files = client.files.list_by_project(1).await?;
     /// ```
-    #[must_use]
-    pub fn list_by_project(&self, project_id: RedmineId) -> Result<Vec<File>, RedmineError> {
+    pub async fn list_by_project(&self, project_id: RedmineId) -> Result<Vec<File>, RedmineError> {
         let path = format!("/projects/{}/files.json", project_id);
-        let (items, _total) = self.http.get_paginated(&path, "files", None, &[], "files.list_by_project")?;
+        let (items, _total) = self.http.get_paginated(&path, "files", None, &[], "files.list_by_project").await?;
         Ok(items)
     }
 
@@ -46,14 +45,13 @@ impl FilesResource {
     ///
     /// # Exemplo
     /// ```rust,ignore
-    /// let token = client.attachments.upload("relatorio.pdf", &bytes)?;
+    /// let token = client.attachments.upload("relatorio.pdf", &bytes).await?;
     /// let payload = CreateFilePayload { token, filename: "relatorio.pdf".into(), ..Default::default() };
-    /// let file = client.files.attach_to_project(1, &payload)?;
+    /// let file = client.files.attach_to_project(1, &payload).await?;
     /// ```
-    #[must_use]
-    pub fn attach_to_project(&self, project_id: RedmineId, payload: &CreateFilePayload) -> Result<File, RedmineError> {
+    pub async fn attach_to_project(&self, project_id: RedmineId, payload: &CreateFilePayload) -> Result<File, RedmineError> {
         let path = format!("/projects/{}/files.json", project_id);
         let body = serde_json::json!({ "file": payload });
-        self.http.post_single(&path, "file", &body, "files.attach_to_project")
+        self.http.post_single(&path, "file", &body, "files.attach_to_project").await
     }
 }

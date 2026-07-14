@@ -27,12 +27,11 @@ impl VersionsResource {
     ///
     /// # Exemplo
     /// ```rust,ignore
-    /// let version = client.versions.get(3)?;
+    /// let version = client.versions.get(3).await?;
     /// ```
-    #[must_use]
-    pub fn get(&self, id: RedmineId) -> Result<Version, RedmineError> {
+    pub async fn get(&self, id: RedmineId) -> Result<Version, RedmineError> {
         let path = format!("/versions/{}.json", id);
-        self.http.get_single(&path, "version", &[], "versions.get")
+        self.http.get_single(&path, "version", &[], "versions.get").await
     }
 
     /// Lista versões de um projeto.
@@ -42,12 +41,11 @@ impl VersionsResource {
     ///
     /// # Exemplo
     /// ```rust,ignore
-    /// let versions = client.versions.list_by_project(1)?;
+    /// let versions = client.versions.list_by_project(1).await?;
     /// ```
-    #[must_use]
-    pub fn list_by_project(&self, project_id: RedmineId) -> Result<Vec<Version>, RedmineError> {
+    pub async fn list_by_project(&self, project_id: RedmineId) -> Result<Vec<Version>, RedmineError> {
         let path = format!("/projects/{}/versions.json", project_id);
-        let (items, _total) = self.http.get_paginated(&path, "versions", None, &[], "versions.list_by_project")?;
+        let (items, _total) = self.http.get_paginated(&path, "versions", None, &[], "versions.list_by_project").await?;
         Ok(items)
     }
 
@@ -60,13 +58,12 @@ impl VersionsResource {
     /// # Exemplo
     /// ```rust,ignore
     /// let payload = CreateVersionPayload { name: "v2.0".into(), ..Default::default() };
-    /// let version = client.versions.create_on_project(1, &payload)?;
+    /// let version = client.versions.create_on_project(1, &payload).await?;
     /// ```
-    #[must_use]
-    pub fn create_on_project(&self, project_id: RedmineId, payload: &CreateVersionPayload) -> Result<Version, RedmineError> {
+    pub async fn create_on_project(&self, project_id: RedmineId, payload: &CreateVersionPayload) -> Result<Version, RedmineError> {
         let path = format!("/projects/{}/versions.json", project_id);
         let body = serde_json::json!({ "version": payload });
-        self.http.post_single(&path, "version", &body, "versions.create_on_project")
+        self.http.post_single(&path, "version", &body, "versions.create_on_project").await
     }
 
     /// Atualiza uma versão.
@@ -78,13 +75,12 @@ impl VersionsResource {
     /// # Exemplo
     /// ```rust,ignore
     /// let payload = UpdateVersionPayload { name: Some("v2.1".into()), ..Default::default() };
-    /// client.versions.update(3, &payload)?;
+    /// client.versions.update(3, &payload).await?;
     /// ```
-    #[must_use]
-    pub fn update(&self, id: RedmineId, payload: &UpdateVersionPayload) -> Result<(), RedmineError> {
+    pub async fn update(&self, id: RedmineId, payload: &UpdateVersionPayload) -> Result<(), RedmineError> {
         let path = format!("/versions/{}.json", id);
         let body = serde_json::json!({ "version": payload });
-        self.http.put::<serde_json::Value, _>(&path, &body, "versions.update")?;
+        self.http.put::<serde_json::Value, _>(&path, &body, "versions.update").await?;
         Ok(())
     }
 
@@ -95,11 +91,10 @@ impl VersionsResource {
     ///
     /// # Exemplo
     /// ```rust,ignore
-    /// client.versions.delete(3)?;
+    /// client.versions.delete(3).await?;
     /// ```
-    #[must_use]
-    pub fn delete(&self, id: RedmineId) -> Result<(), RedmineError> {
+    pub async fn delete(&self, id: RedmineId) -> Result<(), RedmineError> {
         let path = format!("/versions/{}.json", id);
-        self.http.delete(&path, &[], "versions.delete")
+        self.http.delete(&path, &[], "versions.delete").await
     }
 }

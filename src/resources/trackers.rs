@@ -23,11 +23,10 @@ impl TrackersResource {
     ///
     /// # Exemplo
     /// ```rust,ignore
-    /// let trackers = client.trackers.list()?;
+    /// let trackers = client.trackers.list().await?;
     /// ```
-    #[must_use]
-    pub fn list(&self) -> Result<Vec<Tracker>, RedmineError> {
-        let (items, _total) = self.http.get_paginated("/trackers.json", "trackers", None, &[], "trackers.list")?;
+    pub async fn list(&self) -> Result<Vec<Tracker>, RedmineError> {
+        let (items, _total) = self.http.get_paginated("/trackers.json", "trackers", None, &[], "trackers.list").await?;
         Ok(items)
     }
 }

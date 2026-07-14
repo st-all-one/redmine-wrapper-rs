@@ -26,11 +26,10 @@ impl GroupsResource {
     ///
     /// # Exemplo
     /// ```rust,ignore
-    /// let groups = client.groups.list()?;
+    /// let groups = client.groups.list().await?;
     /// ```
-    #[must_use]
-    pub fn list(&self) -> Result<Vec<Group>, RedmineError> {
-        self.http.get_all_paginated("/groups.json", "groups", &[], "groups.list")
+    pub async fn list(&self) -> Result<Vec<Group>, RedmineError> {
+        self.http.get_all_paginated("/groups.json", "groups", &[], "groups.list").await
     }
 
     /// Retorna um grupo pelo ID.
@@ -40,12 +39,11 @@ impl GroupsResource {
     ///
     /// # Exemplo
     /// ```rust,ignore
-    /// let group = client.groups.get(5)?;
+    /// let group = client.groups.get(5).await?;
     /// ```
-    #[must_use]
-    pub fn get(&self, id: RedmineId) -> Result<Group, RedmineError> {
+    pub async fn get(&self, id: RedmineId) -> Result<Group, RedmineError> {
         let path = format!("/groups/{}.json", id);
-        self.http.get_single(&path, "group", &[], "groups.get")
+        self.http.get_single(&path, "group", &[], "groups.get").await
     }
 
     /// Retorna um grupo com includes (users, memberships).
@@ -56,13 +54,12 @@ impl GroupsResource {
     ///
     /// # Exemplo
     /// ```rust,ignore
-    /// let group = client.groups.get_with_includes(5, &["users"])?;
+    /// let group = client.groups.get_with_includes(5, &["users"]).await?;
     /// ```
-    #[must_use]
-    pub fn get_with_includes(&self, id: RedmineId, includes: &[&str]) -> Result<Group, RedmineError> {
+    pub async fn get_with_includes(&self, id: RedmineId, includes: &[&str]) -> Result<Group, RedmineError> {
         let path = format!("/groups/{}.json", id);
         let query = vec![("include", includes.join(","))];
-        self.http.get_single(&path, "group", &query, "groups.get_with_includes")
+        self.http.get_single(&path, "group", &query, "groups.get_with_includes").await
     }
 
     /// Cria um novo grupo.
@@ -73,12 +70,11 @@ impl GroupsResource {
     /// # Exemplo
     /// ```rust,ignore
     /// let payload = CreateGroupPayload { name: "Desenvolvedores".into() };
-    /// let group = client.groups.create(&payload)?;
+    /// let group = client.groups.create(&payload).await?;
     /// ```
-    #[must_use]
-    pub fn create(&self, payload: &CreateGroupPayload) -> Result<Group, RedmineError> {
+    pub async fn create(&self, payload: &CreateGroupPayload) -> Result<Group, RedmineError> {
         let body = json!({ "group": payload });
-        self.http.post_single("/groups.json", "group", &body, "groups.create")
+        self.http.post_single("/groups.json", "group", &body, "groups.create").await
     }
 
     /// Atualiza um grupo existente.
@@ -90,13 +86,12 @@ impl GroupsResource {
     /// # Exemplo
     /// ```rust,ignore
     /// let payload = UpdateGroupPayload { name: Some("Devs".into()) };
-    /// client.groups.update(5, &payload)?;
+    /// client.groups.update(5, &payload).await?;
     /// ```
-    #[must_use]
-    pub fn update(&self, id: RedmineId, payload: &UpdateGroupPayload) -> Result<(), RedmineError> {
+    pub async fn update(&self, id: RedmineId, payload: &UpdateGroupPayload) -> Result<(), RedmineError> {
         let path = format!("/groups/{}.json", id);
         let body = json!({ "group": payload });
-        self.http.put::<serde_json::Value, _>(&path, &body, "groups.update")?;
+        self.http.put::<serde_json::Value, _>(&path, &body, "groups.update").await?;
         Ok(())
     }
 
@@ -107,12 +102,11 @@ impl GroupsResource {
     ///
     /// # Exemplo
     /// ```rust,ignore
-    /// client.groups.delete(5)?;
+    /// client.groups.delete(5).await?;
     /// ```
-    #[must_use]
-    pub fn delete(&self, id: RedmineId) -> Result<(), RedmineError> {
+    pub async fn delete(&self, id: RedmineId) -> Result<(), RedmineError> {
         let path = format!("/groups/{}.json", id);
-        self.http.delete(&path, &[], "groups.delete")
+        self.http.delete(&path, &[], "groups.delete").await
     }
 
     /// Adiciona um usuário a um grupo.
@@ -123,13 +117,12 @@ impl GroupsResource {
     ///
     /// # Exemplo
     /// ```rust,ignore
-    /// client.groups.add_user(5, 10)?;
+    /// client.groups.add_user(5, 10).await?;
     /// ```
-    #[must_use]
-    pub fn add_user(&self, group_id: RedmineId, user_id: RedmineId) -> Result<(), RedmineError> {
+    pub async fn add_user(&self, group_id: RedmineId, user_id: RedmineId) -> Result<(), RedmineError> {
         let path = format!("/groups/{}/users.json", group_id);
         let body = json!({ "user_id": user_id });
-        self.http.post::<serde_json::Value, _>(&path, &body, "groups.add_user")?;
+        self.http.post::<serde_json::Value, _>(&path, &body, "groups.add_user").await?;
         Ok(())
     }
 
@@ -141,11 +134,10 @@ impl GroupsResource {
     ///
     /// # Exemplo
     /// ```rust,ignore
-    /// client.groups.remove_user(5, 10)?;
+    /// client.groups.remove_user(5, 10).await?;
     /// ```
-    #[must_use]
-    pub fn remove_user(&self, group_id: RedmineId, user_id: RedmineId) -> Result<(), RedmineError> {
+    pub async fn remove_user(&self, group_id: RedmineId, user_id: RedmineId) -> Result<(), RedmineError> {
         let path = format!("/groups/{}/users/{}.json", group_id, user_id);
-        self.http.delete(&path, &[], "groups.remove_user")
+        self.http.delete(&path, &[], "groups.remove_user").await
     }
 }
