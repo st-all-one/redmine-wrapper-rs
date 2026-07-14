@@ -38,10 +38,15 @@ Exemplos práticos de como usar cada um dos 22 resources do `redmine-wrapper-rs`
 ## Issues
 
 ```rust,ignore
-use redmine_wrapper::*;
+use redmine_wrapper::RedmineClient;
 use redmine_wrapper::types::issue::*;
 
-let client = /* ... */;
+let client = RedmineClient::new(
+    RedmineConfigBuilder::default()
+        .base_url("https://redmine.exemplo.com")
+        .token("sua-chave")
+        .build()?,
+)?;
 
 // Listar issues abertas atribuídas a mim
 let filter = IssueFilter {
@@ -49,7 +54,7 @@ let filter = IssueFilter {
     status_id: Some("open".into()),
     ..Default::default()
 };
-let issues = client.issues.list(Some(&filter), None)?;
+let issues = client.issues.list(Some(&filter))?;
 for issue in &issues {
     println!("#{}: {} — {}", issue.id, issue.subject.as_deref().unwrap_or(""), issue.status.as_ref().map(|s| &s.name).unwrap_or(&"N/A".into()));
 }
@@ -74,17 +79,17 @@ let new_issue = client.issues.create(&CreateIssuePayload {
     project_id: 1,
     subject: "Bug crítico no login".into(),
     description: Some("Usuário não consegue autenticar com SSO".into()),
-    priority_id: Some(4), // Urgente
-    tracker_id: Some(1),  // Bug
+    priority_id: Some(4),
+    tracker_id: Some(1),
     assigned_to_id: Some(5),
     ..Default::default()
 })?;
 println!("Issue criada: #{}", new_issue.id);
 
-// Responder (comentar + atualizar)
+// Atualizar (comentar + mudar status)
 client.issues.update(42, &UpdateIssuePayload {
     notes: Some("Corrigido na versão 2.1".into()),
-    status_id: Some(3), // Resolvido
+    status_id: Some(3),
     done_ratio: Some(100),
     ..Default::default()
 })?;
@@ -186,7 +191,7 @@ use redmine_wrapper::types::time_entry::*;
 let entries = client.time_entries.list(Some(&TimeEntryFilter {
     spent_on: Some("2026-07-11".into()),
     ..Default::default()
-}), None)?;
+}))?;
 
 for e in &entries {
     println!("{}h — {} (issue #{})", e.hours.unwrap_or(0.0), e.comments.as_deref().unwrap_or(""), e.issue.as_ref().map(|i| i.id).unwrap_or(0));
@@ -206,12 +211,17 @@ println!("Apontamento #{} criado", entry.id);
 
 ## Journals
 
+> Journals **não** possuem endpoint GET standalone. São obtidos exclusivamente
+> via `GET /issues/{id}.json?include=journals`.
+
 ```rust,ignore
 use redmine_wrapper::types::journal::*;
 
-// Obter journal
-let journal = client.journals.get(123)?;
-println!("Anotações: {}", journal.notes.as_deref().unwrap_or(""));
+// Obter journals de uma issue
+let issue = client.issues.get_with_includes(42, &["journals"])?;
+for journal in issue.journals.unwrap_or_default() {
+    println!("[#{}] {}: {}", journal.id, journal.user.as_ref().map(|u| &u.name).unwrap_or(&"?".into()), journal.notes.as_deref().unwrap_or(""));
+}
 
 // Atualizar anotações
 client.journals.update(123, &UpdateJournalPayload {
@@ -482,7 +492,7 @@ let filter = IssueFilter {
     query_id: Some(5),
     ..Default::default()
 };
-let issues = client.issues.list(Some(&filter), None)?;
+let issues = client.issues.list(Some(&filter))?;
 ```
 
 ## Files
@@ -578,7 +588,7 @@ println!("API Key: {}", account.api_key.as_deref().map(|_| "***").unwrap_or("N/A
 | Projects | ✅ | ✅ | ✅ | ✅ | ✅ | `get_with_includes`, `archive`, `unarchive` |
 | Users | ✅ | ✅ | ✅ | ✅ | ✅ | `get_with_includes`, `get_current` |
 | Time Entries | ✅ | ✅ | ✅ | ✅ | ✅ | — |
-| Journals | — | ✅ | — | ✅ | ✅ (remove) | — |
+| Journals | — | — | — | ✅ | ✅ (remove) | journals via `?include=journals` em Issues |
 | Relations | ✅ | ✅ | ✅ | — | ✅ | `list_by_issue`, `create_on_issue` |
 | Attachments | — | ✅ | — | — | ✅ | `upload` (2-passos) |
 | Wiki | ✅ | ✅ | ✅ | ✅ | ✅ | `get_version`, `create_or_update` |

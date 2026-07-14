@@ -35,8 +35,35 @@ pub struct RedmineConfig {
 }
 ```
 
-Configuração fornecida pelo usuário. Todos os campos são opcionais exceto
-`base_url`. Valores `None` recebem padrões na resolução.
+Configuração fornecida pelo usuário. Use o builder (`RedmineConfigBuilder`)
+para construir — ele valida `base_url` e tem métodos nomeados para cada campo.
+
+### `RedmineConfigBuilder`
+
+```rust,ignore
+pub struct RedmineConfigBuilder { /* campos privados */ }
+
+impl RedmineConfigBuilder {
+    pub fn base_url(self, url: impl Into<String>) -> Self;
+    pub fn token(self, token: impl Into<String>) -> Self;
+    pub fn auth_method(self, method: AuthMethod) -> Self;
+    pub fn switch_user(self, user: impl Into<String>) -> Self;
+    pub fn timeout_secs(self, secs: u64) -> Self;
+    pub fn max_rps(self, rps: u32) -> Self;
+    pub fn build(self) -> Result<RedmineConfig, RedmineError>;
+}
+```
+
+Uso obrigatório do builder (única forma recomendada):
+
+```rust,ignore
+use redmine_wrapper::RedmineConfigBuilder;
+
+let config = RedmineConfigBuilder::default()
+    .base_url("https://redmine.exemplo.com")
+    .token("sua-chave")
+    .build()?;
+```
 
 ### `ResolvedConfig`
 
@@ -155,7 +182,7 @@ e rastreamento (ex: `"issues.list"`, `"projects.get"`).
 | `list(filter, pagination)` | `GET /issues.json` | Stable |
 | `get(id)` | `GET /issues/{id}.json` | Stable |
 | `get_with_includes(id, includes)` | `GET /issues/{id}.json?include=` | Stable |
-| `get_allowed_statuses(id)` | `GET /issues/{id}/statuses.json` | Stable |
+| `get_allowed_statuses(id)` | `GET /issues/{id}.json?include=allowed_statuses` | Stable |
 | `create(request)` | `POST /issues.json` | Stable |
 | `update(id, request)` | `PUT /issues/{id}.json` | Stable |
 | `delete(id)` | `DELETE /issues/{id}.json` | Stable |
@@ -209,9 +236,11 @@ e rastreamento (ex: `"issues.list"`, `"projects.get"`).
 
 | Método | Endpoint | Status |
 |--------|----------|--------|
-| `get(id)` | `GET /journals/{id}.json` | Alpha |
 | `update(id, request)` | `PUT /journals/{id}.json` | Alpha |
-| `remove(id)` | `DELETE /journals/{id}.json` | Alpha |
+| `remove(id)` | `PUT /journals/{id}.json` | Alpha |
+
+> Journals são obtidos exclusivamente via `GET /issues/{id}.json?include=journals`.
+> Não há endpoint GET standalone para journals.
 
 ### RelationsResource
 
@@ -391,36 +420,11 @@ pub struct PaginationParams {
 }
 ```
 
-### `PaginatedResponse<T>`
-
-```rust,ignore
-pub struct PaginatedResponse<T> {
-    pub items: Vec<T>,        // Itens da página atual
-    pub total_count: u32,     // Total de registros disponíveis
-    pub limit: u32,           // Limite aplicado
-    pub offset: u32,          // Offset aplicado
-}
-```
-
-### Uso típico
-
-```rust,ignore
-use redmine_wrapper::http::pagination::PaginationParams;
-
-// Paginação manual
-let params = PaginationParams::new(0, 50);
-let (issues, total) = client.issues.list(Some(&filter), Some(&params))?;
-println!("Página 1 de {} issues (exibindo {})", total, issues.len());
-
-// Auto-paginação (coleta tudo)
-// Internamente usa get_all_paginated para percorrer todas as páginas
-let todas: Vec<Issue> = client.issues.list_all(Some(&filter))?;
-println!("Total de issues: {}", todas.len());
-```
-
 ### Comportamento do servidor
 
 - O servidor **ignora** `limit` > 100 e usa 100 como teto.
 - `offset` = 0 retorna os primeiros registros.
 - `total_count` reflete o total **antes** dos filtros de paginação.
 - Se `offset` >= `total_count`, o array de itens vem vazio.
+- O wrapper faz auto-paginação internamente — métodos de listagem como
+  `client.issues.list()` retornam `Vec<T>` com **todos** os registros.

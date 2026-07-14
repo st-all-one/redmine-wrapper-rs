@@ -16,26 +16,20 @@ endpoints da API.
 ## Exemplo Rápido
 
 ```rust,ignore
-use redmine_wrapper_rs::RedmineClient;
-use redmine_wrapper_rs::config::{AuthMethod, RedmineConfig};
+use redmine_wrapper::RedmineClient;
+use redmine_wrapper::RedmineConfigBuilder;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // Cria um cliente apontando para uma instância Redmine
     let client = RedmineClient::new(
-        RedmineConfig::builder()
+        RedmineConfigBuilder::default()
             .base_url("https://redmine.exemplo.com")
-            .token("seu_token_api_aqui")
-            .auth_method(AuthMethod::ApiKey)
+            .token("seu_token_api")
             .build()?,
     )?;
 
-    // Lista os primeiros projectos (offset 0, limit 25)
-    let projetos = client.projects().list(0, 25)?;
-    println!("{} projectos encontrados", projetos.len());
-
-    // Exibe o nome de cada projecto
-    for projeto in &projetos {
-        println!("- {} (id: {})", projeto.name, projeto.id);
+    let projetos = client.projects.list()?;
+    for p in &projetos {
+        println!("#{}: {} ({})", p.id, p.name.as_deref().unwrap_or("?"), p.identifier.as_deref().unwrap_or("?"));
     }
 
     Ok(())

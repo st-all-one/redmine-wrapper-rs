@@ -20,18 +20,6 @@ impl RelationsResource {
         Self { http }
     }
 
-    /// Lista todas as relações globalmente.
-    ///
-    /// # Exemplo
-    /// ```rust,ignore
-    /// let rels = client.relations.list()?;
-    /// ```
-    #[must_use]
-    pub fn list(&self) -> Result<Vec<Relation>, RedmineError> {
-        let (items, _total) = self.http.get_paginated("/relations.json", "relations", None, &[], "relations.list")?;
-        Ok(items)
-    }
-
     /// Retorna uma relação pelo ID.
     ///
     /// # Parâmetros

@@ -16,4 +16,6 @@ pub struct Tracker {
     pub default_status: Option<super::base::IdName>,
     /// Descrição do tracker.
     pub description: Option<String>,
+    /// Campos padrão habilitados para este tracker (desde Redmine 5.0).
+    pub enabled_standard_fields: Option<Vec<String>>,
 }

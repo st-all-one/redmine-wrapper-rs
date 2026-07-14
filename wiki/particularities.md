@@ -164,15 +164,16 @@ Administradores podem atuar em nome de outro usuário enviando o header
 **`X-Redmine-Switch-User`** com o nome de login do usuário alvo.
 
 ```rust,ignore
-let client = RedmineClient::new(RedmineConfig {
-    base_url: "https://redmine.exemplo.com".into(),
-    token: Some("token_admin".into()),
-    switch_user: Some("joao.silva".into()),
-    ..Default::default()
-})?;
+let client = RedmineClient::new(
+    RedmineConfigBuilder::default()
+        .base_url("https://redmine.exemplo.com")
+        .token("token_admin")
+        .switch_user("joao.silva")
+        .build()?,
+)?;
 
 // Todas as operações serão feitas como "joao.silva"
-client.issues.list(None, None)?;
+client.issues.list(None)?;
 ```
 
 ### Comportamento do servidor
@@ -307,12 +308,13 @@ deslizante (sliding window) para evitar sobrecarga no servidor Redmine.
 O limite máximo de requisições por segundo é configurável via `RedmineConfig`:
 
 ```rust,ignore
-let client = RedmineClient::new(RedmineConfig {
-    base_url: "https://redmine.exemplo.com".into(),
-    token: Some("token".into()),
-    max_rps: Some(5),   // máximo de 5 requisições/s
-    ..Default::default()
-})?;
+let client = RedmineClient::new(
+    RedmineConfigBuilder::default()
+        .base_url("https://redmine.exemplo.com")
+        .token("token")
+        .max_rps(5)
+        .build()?,
+)?;
 ```
 
 Se não especificado, o padrão é **10 requisições/s** (definido em
@@ -375,11 +377,12 @@ O Redmine **não suporta OAuth**. O único método de autenticação disponível
 
 ```rust,ignore
 // Toda a autenticação que o wrapper precisa:
-let client = RedmineClient::new(RedmineConfig {
-    base_url: "https://redmine.exemplo.com".into(),
-    token: Some("sua_chave_api".into()),
-    ..Default::default()
-})?;
+let client = RedmineClient::new(
+    RedmineConfigBuilder::default()
+        .base_url("https://redmine.exemplo.com")
+        .token("sua_chave_api")
+        .build()?,
+)?;
 ```
 
 Para segurança adicional, recomenda-se:

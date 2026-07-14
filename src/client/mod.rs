@@ -26,15 +26,16 @@ use crate::http::client::HttpClient;
 /// # Exemplo
 ///
 /// ```rust,ignore
-/// use redmine_wrapper::{RedmineClient, core::config::RedmineConfig};
+/// use redmine_wrapper::{RedmineClient, RedmineConfigBuilder};
 ///
-/// let client = RedmineClient::new(RedmineConfig {
-///     base_url: "https://redmine.example.com".into(),
-///     token: Some("seu-api-key".into()),
-///     ..Default::default()
-/// })?;
+/// let client = RedmineClient::new(
+///     RedmineConfigBuilder::default()
+///         .base_url("https://redmine.example.com")
+///         .token("seu-api-key")
+///         .build()?,
+/// )?;
 ///
-/// let issues = client.issues.list(None, None)?;
+/// let issues = client.issues.list(None)?;
 /// ```
 #[derive(Debug)]
 pub struct RedmineClient {
@@ -53,13 +54,14 @@ impl RedmineClient {
     /// # Exemplo
     ///
     /// ```rust,ignore
-    /// use redmine_wrapper::{RedmineClient, core::config::RedmineConfig};
+    /// use redmine_wrapper::{RedmineClient, RedmineConfigBuilder};
     ///
-    /// let client = RedmineClient::new(RedmineConfig {
-    ///     base_url: "https://redmine.example.com".into(),
-    ///     token: Some("sua-chave-api".into()),
-    ///     ..Default::default()
-    /// })?;
+    /// let client = RedmineClient::new(
+    ///     RedmineConfigBuilder::default()
+    ///         .base_url("https://redmine.example.com")
+    ///         .token("sua-chave-api")
+    ///         .build()?,
+    /// )?;
     /// ```
     #[must_use]
     pub fn new(config: RedmineConfig) -> Result<Self, RedmineError> {

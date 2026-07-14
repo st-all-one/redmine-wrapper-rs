@@ -28,4 +28,6 @@ pub struct Attachment {
     pub digest: Option<String>,
     /// URL para download do anexo.
     pub download_url: Option<String>,
+    /// URL da miniatura do anexo (presente para imagens).
+    pub thumbnail_url: Option<String>,
 }

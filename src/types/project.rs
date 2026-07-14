@@ -6,17 +6,63 @@ use serde::{Deserialize, Serialize};
 use crate::types::base::{RedmineId, IdName};
 
 /// Status de um projeto no Redmine.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+///
+/// A API retorna os status como números inteiros (1, 5, 9),
+/// mas também aceita strings por robustez.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ProjectStatus {
     /// Projeto ativo.
-    #[serde(rename = "1")]
-    Active,
+    Active = 1,
     /// Projeto encerrado.
-    #[serde(rename = "5")]
-    Closed,
+    Closed = 5,
     /// Projeto arquivado.
-    #[serde(rename = "9")]
-    Archived,
+    Archived = 9,
+}
+
+impl serde::Serialize for ProjectStatus {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_u32(*self as u32)
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for ProjectStatus {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        use serde::de;
+
+        struct Visitor;
+        impl<'de> de::Visitor<'de> for Visitor {
+            type Value = ProjectStatus;
+
+            fn expecting(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+                f.write_str("número (1, 5, 9) ou string (\"1\", \"5\", \"9\")")
+            }
+
+            fn visit_u64<E: de::Error>(self, v: u64) -> Result<ProjectStatus, E> {
+                match v {
+                    1 => Ok(ProjectStatus::Active),
+                    5 => Ok(ProjectStatus::Closed),
+                    9 => Ok(ProjectStatus::Archived),
+                    _ => Err(E::custom(format!("status de projeto desconhecido: {v}"))),
+                }
+            }
+
+            fn visit_str<E: de::Error>(self, v: &str) -> Result<ProjectStatus, E> {
+                match v {
+                    "1" => Ok(ProjectStatus::Active),
+                    "5" => Ok(ProjectStatus::Closed),
+                    "9" => Ok(ProjectStatus::Archived),
+                    _ => Err(E::custom(format!("status de projeto desconhecido: {v}"))),
+                }
+            }
+        }
+        deserializer.deserialize_any(Visitor)
+    }
 }
 
 /// Projeto retornado pela API.
@@ -36,6 +82,9 @@ pub struct Project {
     pub status: Option<ProjectStatus>,
     /// Indica se o projeto é público.
     pub is_public: Option<bool>,
+    /// Indica se herda membros do projeto pai.
+    #[serde(rename = "inherit_members")]
+    pub inherit_members: Option<bool>,
     /// Projeto pai (subprojeto).
     pub parent: Option<IdName>,
     /// Data de criação do projeto.
@@ -50,8 +99,9 @@ pub struct Project {
     pub enabled_modules: Option<Vec<IdName>>,
     /// Atividades de apontamento de horas do projeto.
     pub time_entry_activities: Option<Vec<IdName>>,
-    /// Campos personalizados das issues do projeto.
-    pub issue_custom_fields: Option<Vec<IdName>>,
+    /// Campos personalizados do projeto.
+    #[serde(rename = "custom_fields")]
+    pub custom_fields: Option<Vec<crate::types::base::CustomFieldValue>>,
 }
 
 /// Payload para criação de um projeto.

@@ -5,13 +5,20 @@
 use serde::{Deserialize, Serialize};
 use crate::types::base::IdName;
 
+/// Referência a uma página pai na hierarquia wiki (contém apenas título).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WikiParent {
+    /// Título da página pai.
+    pub title: String,
+}
+
 /// Resumo de uma página wiki (listagem).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WikiPageSummary {
     /// Título da página wiki.
     pub title: String,
     /// Página pai na hierarquia wiki.
-    pub parent: Option<IdName>,
+    pub parent: Option<WikiParent>,
     /// Número da versão atual da página.
     pub version: u32,
     /// Data de criação da página.
@@ -26,7 +33,7 @@ pub struct WikiPage {
     /// Título da página wiki.
     pub title: Option<String>,
     /// Página pai na hierarquia wiki.
-    pub parent: Option<IdName>,
+    pub parent: Option<WikiParent>,
     /// Conteúdo textual da página em formato wiki.
     pub text: Option<String>,
     /// Número da versão atual da página.

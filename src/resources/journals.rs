@@ -20,21 +20,6 @@ impl JournalsResource {
         Self { http }
     }
 
-    /// Retorna um journal pelo ID.
-    ///
-    /// # Parâmetros
-    /// - `id` — ID numérico do journal
-    ///
-    /// # Exemplo
-    /// ```rust,ignore
-    /// let journal = client.journals.get(1)?;
-    /// ```
-    #[must_use]
-    pub fn get(&self, id: RedmineId) -> Result<Journal, RedmineError> {
-        let path = format!("/journals/{}.json", id);
-        self.http.get_single(&path, "journal", &[], "journals.get")
-    }
-
     /// Atualiza as anotações de um journal.
     ///
     /// # Parâmetros

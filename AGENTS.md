@@ -103,7 +103,7 @@ REDMINE_URL=https://redmine.example.com REDMINE_TOKEN=xxx cargo run --example de
 | UsersResource | list, get, get_with_includes, get_current, create, update, delete | Stable |
 | TimeEntriesResource | list, get, create, update, delete | Stable |
 | AttachmentsResource | get, delete, upload | Beta |
-| JournalsResource | get, update, remove | Alpha |
+| JournalsResource | update, remove | Alpha |
 | RelationsResource | get, list_by_issue, create_on_issue, delete | Alpha |
 | WikiResource | list, get, get_version, create_or_update, delete | Alpha |
 | VersionsResource | get, list_by_project, create_on_project, update, delete | Alpha |

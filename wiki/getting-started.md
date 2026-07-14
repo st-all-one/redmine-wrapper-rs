@@ -13,10 +13,10 @@ redmine-wrapper-rs = "0.1"
 
 ### Feature flags
 
-| Flag          | Padrão  | Descrição                                       |
-|---------------|---------|-------------------------------------------------|
-| `rustls`      | `sim`   | Usa rustls como TLS nativo (ligação estática)   |
-| `native-tls`  | `não`   | Usa a TLS do sistema operativo (OpenSSL/SChannel) |
+| Flag          | Padrão | Descrição                                       |
+|---------------|--------|-------------------------------------------------|
+| `rustls`      | sim    | Usa rustls como TLS nativo (ligação estática)   |
+| `native-tls`  | não    | Usa a TLS do sistema (OpenSSL/SChannel)         |
 
 Para trocar para `native-tls`:
 
@@ -27,73 +27,60 @@ redmine-wrapper-rs = { version = "0.1", default-features = false, features = ["n
 
 ## Configuração
 
-A estrutura [`RedmineConfig`](api-reference#RedmineConfig) agrupa todos os parâmetros de
-ligação ao servidor Redmine. Utilize o padrão _builder_ para a construir.
+Use o **builder** `RedmineConfigBuilder` para construir a configuração.
+O builder valida que `base_url` não está vazio e aplica padrões para
+os campos opcionais.
 
-| Campo          | Tipo               | Obrigatório | Descrição                                           |
-|----------------|--------------------|-------------|-----------------------------------------------------|
-| `base_url`     | `String`           | sim         | URL base do Redmine (ex: `https://redmine.exemplo.com`) |
-| `token`        | `String`           | sim         | Chave de API do Redmine                             |
-| `auth_method`  | `AuthMethod`       | não         | Método de autenticação (`ApiKey` por omissão)       |
-| `switch_user`  | `Option<String>`   | não         | Nome de utilizador para _sudo_ na API               |
-| `timeout`      | `Duration`         | não         | Timeout global para pedidos HTTP (padrão: 30s)      |
-| `max_rps`      | `u32`              | não         | Máximo de pedidos por segundo (rate limiting local) |
-
-### Variáveis de ambiente
-
-| Variável           | Campo correspondente | Descrição                       |
-|--------------------|----------------------|---------------------------------|
-| `REDMINE_URL`      | `base_url`           | URL base da instância Redmine   |
-| `REDMINE_TOKEN`    | `token`              | Chave de API do Redmine         |
-
-Se estas variáveis estiverem definidas, o valor é usado como padrão no builder,
-mas pode ser sobrescrito programaticamente.
-
-Exemplo de construção:
+| Método do builder | Tipo | Obrigatório | Descrição |
+|-------------------|------|-------------|-----------|
+| `.base_url(url)` | `String` | sim | URL base do Redmine |
+| `.token(token)` | `String` | não | Chave de API |
+| `.switch_user(login)` | `String` | não | Impersonação (requer admin) |
+| `.timeout_secs(s)` | `u64` | não | Timeout HTTP (padrão: 30s) |
+| `.max_rps(n)` | `u32` | não | Rate limiting (padrão: 10 req/s) |
 
 ```rust,ignore
-use redmine_wrapper_rs::config::{AuthMethod, RedmineConfig};
-use std::time::Duration;
+use redmine_wrapper::RedmineConfigBuilder;
 
-let config = RedmineConfig::builder()
+let config = RedmineConfigBuilder::default()
     .base_url("https://redmine.exemplo.com")
-    .token("abc123def456")
-    .auth_method(AuthMethod::ApiKey)
-    .switch_user("joao")
-    .timeout(Duration::from_secs(60))
-    .max_rps(10)
+    .token("sua-chave-api")
     .build()?;
 ```
 
+### Variáveis de ambiente
+
+| Variável        | Campo   | Descrição                     |
+|-----------------|---------|-------------------------------|
+| `REDMINE_URL`   | `url`   | URL base da instância Redmine |
+| `REDMINE_TOKEN` | `token` | Chave de API                  |
+
 ## Primeira chamada à API
 
-O ponto de entrada é [`RedmineClient`](api-reference#RedmineClient). Todas as operações
-são _blocking_ (síncronas).
+O ponto de entrada é `RedmineClient`. Todas as operações são síncronas (blocking).
+O acesso aos recursos é via `Deref` — use `client.projects`, `client.issues`, etc.
 
 ```rust,ignore
-use redmine_wrapper_rs::RedmineClient;
-use redmine_wrapper_rs::config::RedmineConfig;
+use redmine_wrapper::RedmineClient;
+use redmine_wrapper::RedmineConfigBuilder;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // 1. Carrega configuração (daqui podia vir de variáveis de ambiente)
-    let config = RedmineConfig::builder()
-        .base_url("https://redmine.exemplo.com")
-        .token("abc123def456")
-        .build()?;
+    let client = RedmineClient::new(
+        RedmineConfigBuilder::default()
+            .base_url("https://redmine.exemplo.com")
+            .token("sua-chave-api")
+            .build()?,
+    )?;
 
-    // 2. Cria o cliente (a conexão é lazy — só valida a URL neste ponto)
-    let client = RedmineClient::new(config)?;
-
-    // 3. Lista projectos
-    let projetos = client.projects().list(0, 25)?;
-    println!("Total de projectos: {}", projetos.len());
+    // Lista projetos
+    let projetos = client.projects.list()?;
     for p in &projetos {
-        println!("  [{}] {}", p.id, p.name);
+        println!("#{}: {} ({})", p.id, p.name.as_deref().unwrap_or("?"), p.identifier.as_deref().unwrap_or("?"));
     }
 
-    // 4. Obtém dados do utilizador autenticado (endpoint /users/current.json)
-    let user = client.users().current()?;
-    println!("Autenticado como: {} <{}>", user.login, user.mail);
+    // Dados do usuário autenticado
+    let account = client.my_account.get()?;
+    println!("Autenticado como: {} {}", account.firstname.as_deref().unwrap_or(""), account.lastname.as_deref().unwrap_or(""));
 
     Ok(())
 }
@@ -101,28 +88,24 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 ## Tratamento de erros
 
-A crate define o enum [`RedmineError`](errors#RedmineError) para todos os cenários de falha.
+A crate define o enum `RedmineError` para todos os cenários de falha.
 
 ```rust,ignore
-use redmine_wrapper_rs::RedmineClient;
-use redmine_wrapper_rs::error::RedmineError;
+use redmine_wrapper::RedmineClient;
+use redmine_wrapper::core::errors::RedmineError;
 
-fn listar(client: &RedmineClient) -> Result<(), RedmineError> {
-    match client.projects().list(0, 25) {
+fn listar_projetos(client: &RedmineClient) -> Result<(), RedmineError> {
+    match client.projects.list() {
         Ok(projetos) => {
-            println!("OK — {} projectos", projetos.len());
+            println!("OK — {} projetos", projetos.len());
             Ok(())
         }
-        Err(RedmineError::Http { status, body }) => {
-            eprintln!("Erro HTTP {}: {}", status, body);
-            Err(RedmineError::Http { status, body })
-        }
-        Err(RedmineError::Api { errors }) => {
-            eprintln!("Erro Redmine: {:?}", errors);
-            Err(RedmineError::Api { errors })
+        Err(RedmineError::Api { category, detail, instance, .. }) => {
+            eprintln!("Erro da API [{}]: {} (id: {})", category, detail, instance);
+            Err(RedmineError::Api { category, status: 0, detail: detail.clone(), instance: instance.clone(), context: Box::default() })
         }
         Err(e) => {
-            eprintln!("Erro inesperado: {}", e);
+            eprintln!("Erro inesperado: {e}");
             Err(e)
         }
     }
@@ -131,45 +114,18 @@ fn listar(client: &RedmineClient) -> Result<(), RedmineError> {
 
 ## Paginação
 
-A API do Redmine usa `offset` e `limit` nos _list endpoints_. O wrapper segue o mesmo
-contrato: os métodos de listagem devolvem `Vec<T>` com os registos da página atual.
+Os métodos de listagem (`client.issues.list()`, `client.projects.list()`, etc.)
+fazem **auto-paginação** e retornam `Vec<T>` com todos os registros disponíveis.
+Não é necessário gerenciar `offset`/`limit` manualmente.
 
 ```rust,ignore
-// Página 1: registos 0..24
-let pagina1 = client.issues().list(0, 25)?;
-
-// Página 2: registos 25..49
-let pagina2 = client.issues().list(25, 25)?;
-```
-
-O _offset_ é baseado em zero. O _limit_ máximo aceite pelo Redmine é 100.
-A crate **não** faz paginação eager — devolve apenas a página solicitada.
-Cabe a quem consome iterar se precisar de todos os registos.
-
-Exemplo de recolha total (paginação manual):
-
-```rust,ignore
-let mut todos = Vec::new();
-let limit = 100;
-let mut offset = 0;
-
-loop {
-    let page = client.issues().list(offset, limit)?;
-    if page.is_empty() {
-        break;
-    }
-    todos.extend(page);
-    offset += limit;
-}
-
-println!("Total de issues: {}", todos.len());
+// Todas as issues (várias requisições internas, se necessário)
+let todas = client.issues.list(None)?;
+println!("Total de issues: {}", todas.len());
 ```
 
 ## Imutabilidade
 
-A configuração é **congelada** após a criação do `RedmineClient`. Não é possível
-alterar `base_url`, `token`, `switch_user` ou qualquer outro campo depois de o
-cliente estar construído. Para usar parâmetros diferentes, crie uma nova instância.
-
-Isto garante que todos os pedidos partilham o mesmo contexto de autenticação e
-rastreabilidade (UUID v7 é gerado por pedido, mas a identidade do cliente é fixa).
+A configuração é congelada após a criação do `RedmineClient`. Não é possível
+alterar `base_url`, `token` ou qualquer outro campo depois de o cliente estar
+construído. Para usar parâmetros diferentes, crie uma nova instância.

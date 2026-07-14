@@ -13,15 +13,16 @@
 //!
 //! ```rust,ignore
 //! use redmine_wrapper::RedmineClient;
-//! use redmine_wrapper::core::config::RedmineConfig;
+//! use redmine_wrapper::RedmineConfigBuilder;
 //!
-//! let client = RedmineClient::new(RedmineConfig {
-//!     base_url: "https://redmine.example.com".into(),
-//!     token: Some("sua-chave-api".into()),
-//!     ..Default::default()
-//! })?;
+//! let client = RedmineClient::new(
+//!     RedmineConfigBuilder::default()
+//!         .base_url("https://redmine.example.com")
+//!         .token("sua-chave-api")
+//!         .build()?,
+//! )?;
 //!
-//! let issues = client.issues.list(None, None)?;
+//! let issues = client.issues.list(None)?;
 //! println!("Total de issues: {}", issues.len());
 //! ```
 
