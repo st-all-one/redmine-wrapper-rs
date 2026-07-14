@@ -224,6 +224,23 @@ impl HttpClient {
         Ok(all)
     }
 
+    /// Executa uma requisição PATCH com corpo JSON para atualização parcial.
+    pub async fn patch<T: DeserializeOwned, B: Serialize>(
+        &self,
+        path: &str,
+        body: &B,
+        operation: &str,
+    ) -> Result<T, RedmineError> {
+        let url = self.build_url(path, &[])?;
+        let json_body = serde_json::to_string(body)?;
+        let builder = self
+            .client
+            .patch(&url)
+            .headers(self.auth_headers())
+            .body(json_body);
+        self.execute(builder, operation).await
+    }
+
     /// Executa uma requisição DELETE para remover um recurso.
     pub async fn delete(
         &self,

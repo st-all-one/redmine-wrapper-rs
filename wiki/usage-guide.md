@@ -727,13 +727,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 | Resource | list | get | create | update | delete | Métodos Extras |
 |---|---|---|---|---|---|---|
-| Issues | ✅ | ✅ | ✅ | ✅ | ✅ | `get_with_includes`, `get_allowed_statuses`, `add_watcher`, `remove_watcher` |
+| Issues | ✅ | ✅ | ✅ | ✅ | ✅ | `list_with_includes`, `get_with_includes`, `get_allowed_statuses`, `add_watcher`, `remove_watcher` |
 | Projects | ✅ | ✅ | ✅ | ✅ | ✅ | `get_with_includes`, `archive`, `unarchive` |
-| Users | ✅ | ✅ | ✅ | ✅ | ✅ | `get_with_includes`, `get_current` |
+| Users | ✅ | ✅ | ✅ | ✅ | ✅ | `get_with_includes`, `get_current`, `get_current_user` |
 | Time Entries | ✅ | ✅ | ✅ | ✅ | ✅ | — |
 | Journals | — | — | — | ✅ | ✅ (remove) | journals via `?include=journals` em Issues |
 | Relations | ✅ | ✅ | ✅ | — | ✅ | `list_by_issue`, `create_on_issue` |
-| Attachments | — | ✅ | — | — | ✅ | `upload` (2-passos) |
+| Attachments | — | ✅ | — | ✅ | ✅ | `upload` (2-passos) |
 | Wiki | ✅ | ✅ | ✅ | ✅ | ✅ | `get_version`, `create_or_update` |
 | Versions | ✅ | ✅ | ✅ | ✅ | ✅ | `list_by_project`, `create_on_project` |
 | Enumerations | ✅ | — | — | — | — | `list_issue_priorities`, `list_time_entry_activities`, `list_document_categories` |
@@ -747,5 +747,5 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 | Queries | ✅ | — | — | — | — | — |
 | Files | ✅ | — | — | — | — | `list_by_project`, `attach_to_project` |
 | Search | ✅ | — | — | — | — | — |
-| News | ✅ | ✅ | ✅ | ✅ | ✅ | `list_by_project` |
+| News | ✅ | ✅ | ✅ | ✅ | ✅ | `list_by_project`, `get_with_includes` |
 | My Account | — | ✅ | — | — | — | — |

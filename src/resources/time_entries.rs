@@ -17,6 +17,7 @@ pub struct TimeEntriesResource {
 }
 
 impl TimeEntriesResource {
+    #[must_use]
     pub(crate) fn new(http: Arc<HttpClient>) -> Self {
         Self { http }
     }

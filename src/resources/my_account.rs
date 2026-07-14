@@ -15,6 +15,7 @@ pub struct MyAccountResource {
 }
 
 impl MyAccountResource {
+    #[must_use]
     pub(crate) fn new(http: Arc<HttpClient>) -> Self {
         Self { http }
     }

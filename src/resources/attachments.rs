@@ -8,7 +8,7 @@ use serde::Deserialize;
 
 use crate::core::errors::RedmineError;
 use crate::http::client::HttpClient;
-use crate::types::attachment::Attachment;
+use crate::types::attachment::{Attachment, UpdateAttachmentPayload};
 use crate::types::base::{RedmineId, UploadToken};
 
 /// Recurso para operações com anexos e upload de arquivos.
@@ -18,6 +18,7 @@ pub struct AttachmentsResource {
 }
 
 impl AttachmentsResource {
+    #[must_use]
     pub(crate) fn new(http: Arc<HttpClient>) -> Self {
         Self { http }
     }
@@ -69,6 +70,25 @@ impl AttachmentsResource {
         let path = format!("/uploads.json?filename={}", filename);
         let result: UploadTokenResponse = self.http.post_binary(&path, data, "application/octet-stream", "attachments.upload").await?;
         Ok(result.upload.token)
+    }
+
+    /// Atualiza os metadados de um anexo (descrição, nome do arquivo).
+    ///
+    /// Requer que o usuário autenticado seja o autor do anexo ou administrador.
+    ///
+    /// # Parâmetros
+    /// - `id` — Identificador único do anexo
+    /// - `payload` — Dados atualizados do anexo
+    ///
+    /// # Exemplo
+    /// ```rust,ignore
+    /// let payload = UpdateAttachmentPayload { description: Some("Nova descrição".into()), ..Default::default() };
+    /// client.attachments.update(5, &payload).await?;
+    /// ```
+    pub async fn update(&self, id: RedmineId, payload: &UpdateAttachmentPayload) -> Result<Attachment, RedmineError> {
+        let path = format!("/attachments/{}.json", id);
+        let body = serde_json::json!({ "attachment": payload });
+        self.http.patch(&path, &body, "attachments.update").await
     }
 }
 

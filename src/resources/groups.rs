@@ -18,6 +18,7 @@ pub struct GroupsResource {
 }
 
 impl GroupsResource {
+    #[must_use]
     pub(crate) fn new(http: Arc<HttpClient>) -> Self {
         Self { http }
     }

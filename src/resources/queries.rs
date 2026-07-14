@@ -15,6 +15,7 @@ pub struct QueriesResource {
 }
 
 impl QueriesResource {
+    #[must_use]
     pub(crate) fn new(http: Arc<HttpClient>) -> Self {
         Self { http }
     }

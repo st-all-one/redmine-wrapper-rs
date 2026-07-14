@@ -16,6 +16,7 @@ pub struct FilesResource {
 }
 
 impl FilesResource {
+    #[must_use]
     pub(crate) fn new(http: Arc<HttpClient>) -> Self {
         Self { http }
     }

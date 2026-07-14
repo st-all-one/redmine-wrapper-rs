@@ -17,6 +17,7 @@ pub struct UsersResource {
 }
 
 impl UsersResource {
+    #[must_use]
     pub(crate) fn new(http: Arc<HttpClient>) -> Self {
         Self { http }
     }
@@ -75,6 +76,19 @@ impl UsersResource {
     /// ```
     pub async fn get_current(&self) -> Result<User, RedmineError> {
         self.http.get_single("/my/account.json", "user", &[], "users.get_current").await
+    }
+
+    /// Retorna os dados do usuário autenticado via `/users/current.json`.
+    ///
+    /// Difere de `get_current()` por usar o endpoint `/users/current.json`
+    /// que retorna o tipo [`User`] diretamente, sem passar por `MyAccount`.
+    ///
+    /// # Exemplo
+    /// ```rust,ignore
+    /// let current = client.users.get_current_user().await?;
+    /// ```
+    pub async fn get_current_user(&self) -> Result<User, RedmineError> {
+        self.http.get_single("/users/current.json", "user", &[], "users.get_current_user").await
     }
 
     /// Cria um novo usuário.

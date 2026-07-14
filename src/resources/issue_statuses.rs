@@ -15,6 +15,7 @@ pub struct IssueStatusesResource {
 }
 
 impl IssueStatusesResource {
+    #[must_use]
     pub(crate) fn new(http: Arc<HttpClient>) -> Self {
         Self { http }
     }

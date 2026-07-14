@@ -16,6 +16,7 @@ pub struct NewsResource {
 }
 
 impl NewsResource {
+    #[must_use]
     pub(crate) fn new(http: Arc<HttpClient>) -> Self {
         Self { http }
     }
@@ -58,6 +59,22 @@ impl NewsResource {
     pub async fn get(&self, id: RedmineId) -> Result<News, RedmineError> {
         let path = format!("/news/{}.json", id);
         self.http.get_single(&path, "news", &[], "news.get").await
+    }
+
+    /// Retorna uma notícia com associações (attachments, comments).
+    ///
+    /// # Parâmetros
+    /// - `id` — Identificador único da notícia
+    /// - `includes` — Lista de associações a incluir (ex: `&["attachments", "comments"]`)
+    ///
+    /// # Exemplo
+    /// ```rust,ignore
+    /// let news = client.news.get_with_includes(8, &["attachments"]).await?;
+    /// ```
+    pub async fn get_with_includes(&self, id: RedmineId, includes: &[&str]) -> Result<News, RedmineError> {
+        let path = format!("/news/{}.json", id);
+        let query = vec![("include", includes.join(","))];
+        self.http.get_single(&path, "news", &query, "news.get_with_includes").await
     }
 
     /// Cria uma notícia em um projeto.

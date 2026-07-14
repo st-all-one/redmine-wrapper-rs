@@ -17,6 +17,7 @@ pub struct IssuesResource {
 }
 
 impl IssuesResource {
+    #[must_use]
     pub(crate) fn new(http: Arc<HttpClient>) -> Self {
         Self { http }
     }
@@ -31,9 +32,29 @@ impl IssuesResource {
     /// let issues = client.issues.list(Some(&filter)).await?;
     /// ```
     pub async fn list(&self, filter: Option<&IssueFilter>) -> Result<Vec<Issue>, RedmineError> {
+        self.list_with_includes(filter, &[]).await
+    }
+
+    /// Lista issues com filtros e associações incluídas.
+    ///
+    /// Equivalente a `GET /issues.json?include=journals,attachments,relations`.
+    /// Útil para obter dados relacionados já na listagem.
+    ///
+    /// # Parâmetros
+    /// - `filter` — Filtros opcionais
+    /// - `includes` — Lista de associações a incluir (ex: `&["attachments", "relations"]`)
+    ///
+    /// # Exemplo
+    /// ```rust,ignore
+    /// let issues = client.issues.list_with_includes(Some(&filter), &["attachments", "relations"]).await?;
+    /// ```
+    pub async fn list_with_includes(&self, filter: Option<&IssueFilter>, includes: &[&str]) -> Result<Vec<Issue>, RedmineError> {
         let base = filter_to_query(filter);
-        let query: Vec<(&str, String)> = base.iter().map(|(k, v)| (k.as_str(), v.clone())).collect();
-        self.http.get_all_paginated("/issues.json", "issues", &query, "issues.list").await
+        let mut query: Vec<(&str, String)> = base.iter().map(|(k, v)| (k.as_str(), v.clone())).collect();
+        if !includes.is_empty() {
+            query.push(("include", includes.join(",")));
+        }
+        self.http.get_all_paginated("/issues.json", "issues", &query, "issues.list_with_includes").await
     }
 
     /// Retorna uma issue pelo ID.

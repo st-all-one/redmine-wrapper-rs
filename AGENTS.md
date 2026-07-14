@@ -100,15 +100,15 @@ REDMINE_URL=https://redmine.example.com REDMINE_TOKEN=xxx cargo run --example de
 REDMINE_URL=https://redmine.example.com REDMINE_TOKEN=xxx cargo run --example check
 ```
 
-## Endpoints (86 total, 22 resources)
+## Endpoints (91 total, 22 resources)
 
 | Resource | Endpoints | Status |
 |----------|-----------|--------|
-| IssuesResource | list, get, get_with_includes, get_allowed_statuses, create, update, delete, add_watcher, remove_watcher | Stable |
+| IssuesResource | list, list_with_includes, get, get_with_includes, get_allowed_statuses, create, update, delete, add_watcher, remove_watcher | Stable |
 | ProjectsResource | list, get, get_with_includes, create, update, delete, archive, unarchive | Stable |
-| UsersResource | list, get, get_with_includes, get_current, create, update, delete | Stable |
+| UsersResource | list, get, get_with_includes, get_current, get_current_user, create, update, delete | Stable |
 | TimeEntriesResource | list, get, create, update, delete | Stable |
-| AttachmentsResource | get, delete, upload | Beta |
+| AttachmentsResource | get, delete, upload, update | Beta |
 | JournalsResource | update, remove | Alpha |
 | RelationsResource | get, list_by_issue, create_on_issue, delete | Alpha |
 | WikiResource | list, get, get_version, create_or_update, delete | Alpha |
@@ -124,5 +124,5 @@ REDMINE_URL=https://redmine.example.com REDMINE_TOKEN=xxx cargo run --example ch
 | QueriesResource | list | Alpha |
 | FilesResource | list_by_project, attach_to_project | Alpha |
 | SearchResource | search | Alpha |
-| NewsResource | list, list_by_project, get, create, update, delete | Alpha |
+| NewsResource | list, list_by_project, get, get_with_includes, create, update, delete | Alpha |
 | MyAccountResource | get | Alpha |

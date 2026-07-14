@@ -5,6 +5,17 @@
 use serde::{Deserialize, Serialize};
 use crate::types::base::{RedmineId, IdName};
 
+/// Payload para atualizar metadados de um anexo via PATCH.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct UpdateAttachmentPayload {
+    /// Nova descrição do anexo.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub description: Option<String>,
+    /// Novo nome do arquivo.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub filename: Option<String>,
+}
+
 /// Anexo retornado pela API.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Attachment {

@@ -168,6 +168,7 @@ para tracing/rastreio (ex: `"issues.list"`, `"projects.get"`).
 | Método | Endpoint | Status |
 |--------|----------|--------|
 | `list(filter)` | `GET /issues.json` | Stable |
+| `list_with_includes(filter, includes)` | `GET /issues.json?include=` | Stable |
 | `get(id)` | `GET /issues/{id}.json` | Stable |
 | `get_with_includes(id, includes)` | `GET /issues/{id}.json?include=` | Stable |
 | `get_allowed_statuses(id)` | `GET /issues/{id}.json?include=allowed_statuses` | Stable |
@@ -197,7 +198,8 @@ para tracing/rastreio (ex: `"issues.list"`, `"projects.get"`).
 | `list(filter)` | `GET /users.json` | Stable |
 | `get(id)` | `GET /users/{id}.json` | Stable |
 | `get_with_includes(id, includes)` | `GET /users/{id}.json?include=` | Stable |
-| `get_current()` | `GET /users/current.json` | Stable |
+| `get_current()` | `GET /my/account.json` (via `User`) | Stable |
+| `get_current_user()` | `GET /users/current.json` | Alpha |
 | `create(request)` | `POST /users.json` | Stable |
 | `update(id, request)` | `PUT /users/{id}.json` | Stable |
 | `delete(id)` | `DELETE /users/{id}.json` | Stable |
@@ -219,6 +221,7 @@ para tracing/rastreio (ex: `"issues.list"`, `"projects.get"`).
 | `get(id)` | `GET /attachments/{id}.json` | Beta |
 | `delete(id)` | `DELETE /attachments/{id}.json` | Beta |
 | `upload(filename, data)` | `POST /uploads.json` | Beta |
+| `update(id, payload)` | `PATCH /attachments/{id}.json` | Alpha |
 
 ### JournalsResource
 
@@ -351,6 +354,7 @@ para tracing/rastreio (ex: `"issues.list"`, `"projects.get"`).
 | `list()` | `GET /news.json` | Alpha |
 | `list_by_project(project_id)` | `GET /projects/{id}/news.json` | Alpha |
 | `get(id)` | `GET /news/{id}.json` | Alpha |
+| `get_with_includes(id, includes)` | `GET /news/{id}.json?include=` | Alpha |
 | `create(project_id, request)` | `POST /news.json` | Alpha |
 | `update(id, request)` | `PUT /news/{id}.json` | Alpha |
 | `delete(id)` | `DELETE /news/{id}.json` | Alpha |

@@ -10,7 +10,7 @@
 
 </div>
 
-**`redmine-wrapper-rs`** é um wrapper puramente back-end para a API REST do Redmine, construído em **Rust assíncrono (tokio + reqwest)** com foco em segurança de tipos, rastreabilidade via UUID v7 e cobertura completa de todos os 86 endpoints. Cada instância é isolada, imutável e `Send + Sync` — pode ser compartilhada entre tasks tokio sem risco de contaminação de estado.
+**`redmine-wrapper-rs`** é um wrapper puramente back-end para a API REST do Redmine, construído em **Rust assíncrono (tokio + reqwest)** com foco em segurança de tipos, rastreabilidade via UUID v7 e cobertura completa de todos os 91 endpoints. Cada instância é isolada, imutável e `Send + Sync` — pode ser compartilhada entre tasks tokio sem risco de contaminação de estado.
 
 ---
 
@@ -114,17 +114,17 @@ async fn handle(client: &RedmineClient) -> Result<(), RedmineError> {
 
 ## 🌐 Recursos Cobertos
 
-Todos os **22 recursos** com **86 métodos** públicos.
+Todos os **22 recursos** com **91 métodos** públicos.
 
 | Resource | list | get | create | update | delete | Métodos Extras |
 |---|---|---|---|---|---|---|
-| **Issues** | ✅ | ✅ | ✅ | ✅ | ✅ | `get_with_includes`, `get_allowed_statuses`, `add_watcher`, `remove_watcher` |
+| **Issues** | ✅ | ✅ | ✅ | ✅ | ✅ | `list_with_includes`, `get_with_includes`, `get_allowed_statuses`, `add_watcher`, `remove_watcher` |
 | **Projects** | ✅ | ✅ | ✅ | ✅ | ✅ | `get_with_includes`, `archive`, `unarchive` |
-| **Users** | ✅ | ✅ | ✅ | ✅ | ✅ | `get_with_includes`, `get_current` |
+| **Users** | ✅ | ✅ | ✅ | ✅ | ✅ | `get_with_includes`, `get_current`, `get_current_user` |
 | **Time Entries** | ✅ | ✅ | ✅ | ✅ | ✅ | — |
 | **Journals** | — | — | — | ✅ | ✅ (remove) | journals via `?include=journals` |
 | **Relations** | ✅ | ✅ | ✅ | — | ✅ | `list_by_issue`, `create_on_issue` |
-| **Attachments** | — | ✅ | — | — | ✅ | `upload` (2-passos) |
+| **Attachments** | — | ✅ | — | ✅ | ✅ | `upload` (2-passos) |
 | **Wiki** | ✅ | ✅ | ✅ | ✅ | ✅ | `get_version`, `create_or_update` |
 | **Versions** | ✅ | ✅ | ✅ | ✅ | ✅ | `list_by_project`, `create_on_project` |
 | **Enumerations** | ✅ | — | — | — | — | 3 endpoints de listagem |
@@ -138,7 +138,7 @@ Todos os **22 recursos** com **86 métodos** públicos.
 | **Queries** | ✅ | — | — | — | — | — |
 | **Files** | ✅ | — | — | — | — | `list_by_project`, `attach_to_project` |
 | **Search** | ✅ | — | — | — | — | — |
-| **News** | ✅ | ✅ | ✅ | ✅ | ✅ | `list_by_project` |
+| **News** | ✅ | ✅ | ✅ | ✅ | ✅ | `list_by_project`, `get_with_includes` |
 | **My Account** | — | ✅ | — | — | — | — |
 
 ---
@@ -380,8 +380,8 @@ O servidor Redmine impõe um teto de 100 itens por página. O wrapper faz auto-p
 | **Config** | Objeto `create({...})` | Struct `RedmineConfig + Default + Builder` |
 | **Resources** | 22 classes lazy via getter | 22 structs como campos diretos |
 | **Thread safety** | `EventLoop` single-thread | `Send + Sync` nativo |
-| **Testes** | 28 testes (Deno) | 31 testes (wiremock) |
-| **Maturidade** | ~86 métodos públicos | ~86 métodos públicos |
+| **Testes** | 28 testes (Deno) | 31 testes (wiremock) + 42 validacao real |
+| **Maturidade** | ~86 métodos públicos | ~91 métodos públicos |
 
 ---
 
