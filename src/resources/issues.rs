@@ -130,8 +130,7 @@ impl IssuesResource {
     /// ```
     pub async fn update(&self, id: RedmineId, payload: &UpdateIssuePayload) -> Result<(), RedmineError> {
         let path = format!("/issues/{}.json", id);
-        self.http.put::<serde_json::Value, _>(&path, &UpdateIssueWrapper { issue: payload.clone() }, "issues.update").await?;
-        Ok(())
+        self.http.put_void(&path, &UpdateIssueWrapper { issue: payload.clone() }, "issues.update").await
     }
 
     /// Exclui uma issue.

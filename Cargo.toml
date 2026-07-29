@@ -40,9 +40,3 @@ missing_docs = "warn"
 pedantic = { level = "warn", priority = -1 }
 unwrap_used = "deny"
 
-[profile.release]
-opt-level = 3
-lto = "fat"
-codegen-units = 1
-strip = "symbols"
-panic = "abort"

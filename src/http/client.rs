@@ -113,6 +113,23 @@ impl HttpClient {
         self.execute(builder, operation).await
     }
 
+    /// Executa uma requisição PUT com corpo JSON, sem desserializar a resposta (204 No Content).
+    pub async fn put_void<B: Serialize>(
+        &self,
+        path: &str,
+        body: &B,
+        operation: &str,
+    ) -> Result<(), RedmineError> {
+        let url = self.build_url(path, &[])?;
+        let json_body = serde_json::to_string(body)?;
+        let builder = self
+            .client
+            .put(&url)
+            .headers(self.auth_headers())
+            .body(json_body);
+        self.execute_void(builder, operation).await
+    }
+
     /// Executa uma GET e extrai um campo específico do JSON de resposta.
     pub async fn get_single<T: DeserializeOwned>(
         &self,
@@ -210,10 +227,11 @@ impl HttpClient {
                 .get("total_count")
                 .and_then(|v| v.as_u64())
                 .unwrap_or(0) as u32;
-            let items: Vec<T> = v
-                .get(item_key)
-                .and_then(|v| serde_json::from_value(v.clone()).ok())
-                .unwrap_or_default();
+            let items: Vec<T> = match v.get(item_key) {
+                Some(arr) => serde_json::from_value(arr.clone())
+                    .map_err(RedmineError::from)?,
+                None => Vec::new(),
+            };
             let c = items.len() as u32;
             all.extend(items);
             if offset + c >= total {

@@ -12,7 +12,8 @@ pub type RedmineId = u64;
 pub struct IdName {
     /// ID do recurso.
     pub id: RedmineId,
-    /// Nome do recurso.
+    /// Nome do recurso (alguns endpoints retornam apenas o id).
+    #[serde(default)]
     pub name: String,
 }
 
