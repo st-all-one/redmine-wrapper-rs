@@ -2,9 +2,9 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-use std::collections::HashMap;
+use crate::types::base::{CustomFieldPayload, CustomFieldValue, IdName, RedmineId, UploadPayload};
 use serde::{Deserialize, Serialize};
-use crate::types::base::{RedmineId, IdName, CustomFieldValue, CustomFieldPayload, UploadPayload};
+use std::collections::HashMap;
 
 /// Status permitido para transição de uma issue.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -46,7 +46,7 @@ pub struct IssueFilter {
     /// Filtra por ID da categoria.
     pub category_id: Option<RedmineId>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    /// Filtra por ID da versão alvo (fixed_version).
+    /// Filtra por ID da versão alvo (`fixed_version`).
     pub fixed_version_id: Option<RedmineId>,
     #[serde(skip_serializing_if = "Option::is_none")]
     /// Filtra por ID do autor.
@@ -58,7 +58,7 @@ pub struct IssueFilter {
     /// Filtra por data de atualização.
     pub updated_on: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    /// Campo para ordenação (ex: "created_on:desc").
+    /// Campo para ordenação (ex.: `created_on:desc`).
     pub sort: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     /// ID da consulta salva (query) para aplicar filtros predefinidos.
@@ -130,7 +130,7 @@ pub struct Issue {
     /// Observadores da issue.
     pub watchers: Option<Vec<IdName>>,
     /// Subtarefas (issues filhas).
-    pub children: Option<Vec<Issue>>,
+    pub children: Option<Vec<Self>>,
     /// Status permitidos para transição.
     pub allowed_statuses: Option<Vec<AllowedStatus>>,
 }

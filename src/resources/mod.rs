@@ -8,9 +8,9 @@ pub mod attachments;
 pub mod custom_fields;
 /// Operacoes com enumeracoes: prioridades, atividades, categorias.
 pub mod enumerations;
-/// Operacoes com arquivos de projeto: list_by_project, attach_to_project.
+/// Operacoes com arquivos de projeto: `list_by_project`, `attach_to_project`.
 pub mod files;
-/// Operacoes com grupos: CRUD + add_user, remove_user.
+/// Operacoes com grupos: CRUD + `add_user`, `remove_user`.
 pub mod groups;
 /// Operacoes com categorias de issue: CRUD.
 pub mod issue_categories;
@@ -40,11 +40,11 @@ pub mod search;
 pub mod time_entries;
 /// Operacoes com trackers: list.
 pub mod trackers;
-/// Operacoes com usuarios: CRUD + includes + get_current.
+/// Operacoes com usuarios: CRUD + includes + `get_current`.
 pub mod users;
 /// Operacoes com versoes: CRUD.
 pub mod versions;
-/// Operacoes com wiki: CRUD + get_version.
+/// Operacoes com wiki: CRUD + `get_version`.
 pub mod wiki;
 
 pub use attachments::AttachmentsResource;

@@ -2,8 +2,8 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+use crate::types::base::{IdName, RedmineId};
 use serde::{Deserialize, Serialize};
-use crate::types::base::{RedmineId, IdName};
 
 /// Filtros para listagem de apontamentos de horas.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -58,10 +58,10 @@ pub struct TimeEntry {
 /// Payload para criação de um apontamento de horas.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CreateTimeEntryPayload {
-    /// ID da issue associada (obrigatório se project_id não for informado).
+    /// ID da issue associada (obrigatório se `project_id` não for informado).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub issue_id: Option<RedmineId>,
-    /// ID do projeto (obrigatório se issue_id não for informado).
+    /// ID do projeto (obrigatório se `issue_id` não for informado).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub project_id: Option<RedmineId>,
     /// Quantidade de horas gastas (obrigatório).

@@ -27,7 +27,10 @@ impl TrackersResource {
     /// let trackers = client.trackers.list().await?;
     /// ```
     pub async fn list(&self) -> Result<Vec<Tracker>, RedmineError> {
-        let (items, _total) = self.http.get_paginated("/trackers.json", "trackers", None, &[], "trackers.list").await?;
+        let (items, _total) = self
+            .http
+            .get_paginated("/trackers.json", "trackers", None, &[], "trackers.list")
+            .await?;
         Ok(items)
     }
 }

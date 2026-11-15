@@ -9,16 +9,46 @@ use redmine_wrapper::core::errors::{ErrorCategory, ErrorContext, RedmineError};
 
 #[test]
 fn test_error_category_from_status() {
-    assert_eq!(ErrorCategory::from_status(401), Some(ErrorCategory::AuthenticationFailed));
-    assert_eq!(ErrorCategory::from_status(403), Some(ErrorCategory::AuthorizationDenied));
-    assert_eq!(ErrorCategory::from_status(404), Some(ErrorCategory::ResourceNotFound));
-    assert_eq!(ErrorCategory::from_status(409), Some(ErrorCategory::Conflict));
-    assert_eq!(ErrorCategory::from_status(412), Some(ErrorCategory::ImpersonationFailed));
-    assert_eq!(ErrorCategory::from_status(413), Some(ErrorCategory::UploadTooLarge));
-    assert_eq!(ErrorCategory::from_status(422), Some(ErrorCategory::ValidationError));
-    assert_eq!(ErrorCategory::from_status(429), Some(ErrorCategory::RateLimited));
-    assert_eq!(ErrorCategory::from_status(504), Some(ErrorCategory::Timeout));
-    assert_eq!(ErrorCategory::from_status(503), Some(ErrorCategory::NetworkError));
+    assert_eq!(
+        ErrorCategory::from_status(401),
+        Some(ErrorCategory::AuthenticationFailed)
+    );
+    assert_eq!(
+        ErrorCategory::from_status(403),
+        Some(ErrorCategory::AuthorizationDenied)
+    );
+    assert_eq!(
+        ErrorCategory::from_status(404),
+        Some(ErrorCategory::ResourceNotFound)
+    );
+    assert_eq!(
+        ErrorCategory::from_status(409),
+        Some(ErrorCategory::Conflict)
+    );
+    assert_eq!(
+        ErrorCategory::from_status(412),
+        Some(ErrorCategory::ImpersonationFailed)
+    );
+    assert_eq!(
+        ErrorCategory::from_status(413),
+        Some(ErrorCategory::UploadTooLarge)
+    );
+    assert_eq!(
+        ErrorCategory::from_status(422),
+        Some(ErrorCategory::ValidationError)
+    );
+    assert_eq!(
+        ErrorCategory::from_status(429),
+        Some(ErrorCategory::RateLimited)
+    );
+    assert_eq!(
+        ErrorCategory::from_status(504),
+        Some(ErrorCategory::Timeout)
+    );
+    assert_eq!(
+        ErrorCategory::from_status(503),
+        Some(ErrorCategory::NetworkError)
+    );
     assert_eq!(ErrorCategory::from_status(200), None);
     assert_eq!(ErrorCategory::from_status(500), None);
 }
@@ -32,10 +62,19 @@ fn test_error_category_http_status() {
 
 #[test]
 fn test_error_category_description() {
-    assert_eq!(ErrorCategory::AuthenticationFailed.description(), "authentication-failed");
-    assert_eq!(ErrorCategory::ValidationError.description(), "validation-error");
+    assert_eq!(
+        ErrorCategory::AuthenticationFailed.description(),
+        "authentication-failed"
+    );
+    assert_eq!(
+        ErrorCategory::ValidationError.description(),
+        "validation-error"
+    );
     assert_eq!(ErrorCategory::RateLimited.description(), "rate-limited");
-    assert_eq!(ErrorCategory::ResourceNotFound.description(), "resource-not-found");
+    assert_eq!(
+        ErrorCategory::ResourceNotFound.description(),
+        "resource-not-found"
+    );
 }
 
 #[test]

@@ -2,51 +2,51 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-/// Tipos de anexos: [`Attachment`](attachment::Attachment).
+/// Tipos de anexos: [`Attachment`].
 pub mod attachment;
-/// Tipos fundamentais: [`RedmineId`](base::RedmineId), [`IdName`](base::IdName), etc.
+/// Tipos fundamentais: [`RedmineId`], [`IdName`], etc.
 pub mod base;
-/// Tipos de campo personalizado: [`CustomFieldValue`](custom_field::CustomFieldValue).
+/// Tipos de campo personalizado: [`CustomFieldValue`].
 pub mod custom_field;
-/// Tipos de enumeracao: [`IssuePriority`](enumeration::IssuePriority), [`TimeEntryActivity`](enumeration::TimeEntryActivity).
+/// Tipos de enumeracao: [`IssuePriority`], [`TimeEntryActivity`].
 pub mod enumeration;
-/// Tipos de arquivo de projeto: [`File`](file::File).
+/// Tipos de arquivo de projeto: [`File`].
 pub mod file;
-/// Tipos de grupo: [`Group`](group::Group).
+/// Tipos de grupo: [`Group`].
 pub mod group;
-/// Tipos de issue: [`Issue`](issue::Issue), [`IssueFilter`](issue::IssueFilter), payloads.
+/// Tipos de issue: [`Issue`], [`IssueFilter`], payloads.
 pub mod issue;
-/// Tipos de categoria de issue: [`IssueCategory`](issue_category::IssueCategory).
+/// Tipos de categoria de issue: [`IssueCategory`].
 pub mod issue_category;
-/// Tipos de status de issue: [`IssueStatus`](issue_status::IssueStatus).
+/// Tipos de status de issue: [`IssueStatus`].
 pub mod issue_status;
-/// Tipos de journal: [`Journal`](journal::Journal).
+/// Tipos de journal: [`Journal`].
 pub mod journal;
-/// Tipos de membership: [`Membership`](membership::Membership).
+/// Tipos de membership: [`Membership`].
 pub mod membership;
-/// Minha conta: [`MyAccount`](my_account::MyAccount).
+/// Minha conta: [`MyAccount`].
 pub mod my_account;
-/// Tipos de noticia: [`News`](news::News).
+/// Tipos de noticia: [`News`].
 pub mod news;
-/// Tipos de projeto: [`Project`](project::Project).
+/// Tipos de projeto: [`Project`].
 pub mod project;
-/// Tipos de consulta: [`Query`](query::Query).
+/// Tipos de consulta: [`Query`].
 pub mod query;
-/// Tipos de relacao: [`Relation`](relation::Relation).
+/// Tipos de relacao: [`Relation`].
 pub mod relation;
-/// Tipos de papel: [`Role`](role::Role).
+/// Tipos de papel: [`Role`].
 pub mod role;
-/// Tipos de busca: [`SearchFilter`](search::SearchFilter), [`SearchResult`](search::SearchResult).
+/// Tipos de busca: [`SearchFilter`], [`SearchResult`].
 pub mod search;
-/// Tipos de apontamento de horas: [`TimeEntry`](time_entry::TimeEntry).
+/// Tipos de apontamento de horas: [`TimeEntry`].
 pub mod time_entry;
-/// Tipos de tracker: [`Tracker`](tracker::Tracker).
+/// Tipos de tracker: [`Tracker`].
 pub mod tracker;
-/// Tipos de usuario: [`User`](user::User).
+/// Tipos de usuario: [`User`].
 pub mod user;
-/// Tipos de versao: [`Version`](version::Version).
+/// Tipos de versao: [`Version`].
 pub mod version;
-/// Tipos de wiki: [`WikiPage`](wiki::WikiPage).
+/// Tipos de wiki: [`WikiPage`].
 pub mod wiki;
 
 pub use attachment::*;

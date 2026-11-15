@@ -2,8 +2,8 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-use serde::{Deserialize, Serialize};
 use crate::types::base::RedmineId;
+use serde::{Deserialize, Serialize};
 
 /// Tipos de relação entre issues.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -29,10 +29,10 @@ pub enum RelationType {
     /// Sucede (follows).
     #[serde(rename = "follows")]
     Follows,
-    /// Copiada para (copied_to).
+    /// Copiada para (`copied_to`).
     #[serde(rename = "copied_to")]
     CopiedTo,
-    /// Copiada de (copied_from).
+    /// Copiada de (`copied_from`).
     #[serde(rename = "copied_from")]
     CopiedFrom,
 }

@@ -87,7 +87,7 @@ impl RedmineConfig {
 
     /// Concatena a `base_url` com o `path` informado.
     pub(crate) fn api_url(&self, path: &str) -> String {
-        format!("{}{}", self.base_url, path)
+        format!("{}{path}", self.base_url)
     }
 }
 
@@ -118,36 +118,42 @@ pub struct RedmineConfigBuilder {
 
 impl RedmineConfigBuilder {
     /// Define a URL base da instância Redmine (obrigatório).
+    #[must_use]
     pub fn base_url(mut self, url: impl Into<String>) -> Self {
         self.base_url = Some(url.into());
         self
     }
 
     /// Define a chave de API para autenticação.
+    #[must_use]
     pub fn token(mut self, token: impl Into<String>) -> Self {
         self.token = Some(token.into());
         self
     }
 
     /// Define o método de autenticação.
+    #[must_use]
     pub fn auth_method(mut self, method: AuthMethod) -> Self {
         self.auth_method = Some(method);
         self
     }
 
     /// Define usuário para impersonação (header `X-Redmine-Switch-User`).
+    #[must_use]
     pub fn switch_user(mut self, user: impl Into<String>) -> Self {
         self.switch_user = Some(user.into());
         self
     }
 
     /// Define o timeout em segundos para requisições HTTP.
+    #[must_use]
     pub fn timeout_secs(mut self, secs: u64) -> Self {
         self.timeout = Some(Duration::from_secs(secs));
         self
     }
 
     /// Define o máximo de requisições por segundo.
+    #[must_use]
     pub fn max_rps(mut self, rps: u32) -> Self {
         self.max_rps = Some(rps);
         self
@@ -155,7 +161,8 @@ impl RedmineConfigBuilder {
 
     /// Constrói o [`RedmineConfig`] validado.
     ///
-    /// Retorna [`RedmineError::Config`] se `base_url` estiver vazia.
+    /// Retorna [`RedmineError::Config`](crate::core::errors::RedmineError::Config) se `base_url`
+    /// estiver vazia.
     pub fn build(self) -> Result<RedmineConfig, crate::core::errors::RedmineError> {
         let base_url = self.base_url.ok_or_else(|| {
             crate::core::errors::RedmineError::Config("base_url é obrigatória".into())
@@ -171,7 +178,9 @@ impl RedmineConfigBuilder {
             token: self.token,
             auth_method: self.auth_method.unwrap_or_default(),
             switch_user: self.switch_user,
-            timeout: self.timeout.unwrap_or(Duration::from_secs(DEFAULT_TIMEOUT_SECS)),
+            timeout: self
+                .timeout
+                .unwrap_or(Duration::from_secs(DEFAULT_TIMEOUT_SECS)),
             max_rps: self.max_rps.unwrap_or(DEFAULT_MAX_RPS),
         })
     }

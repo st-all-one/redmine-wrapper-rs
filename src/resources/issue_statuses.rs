@@ -27,7 +27,16 @@ impl IssueStatusesResource {
     /// let statuses = client.issue_statuses.list().await?;
     /// ```
     pub async fn list(&self) -> Result<Vec<IssueStatus>, RedmineError> {
-        let (items, _total) = self.http.get_paginated("/issue_statuses.json", "issue_statuses", None, &[], "issue_statuses.list").await?;
+        let (items, _total) = self
+            .http
+            .get_paginated(
+                "/issue_statuses.json",
+                "issue_statuses",
+                None,
+                &[],
+                "issue_statuses.list",
+            )
+            .await?;
         Ok(items)
     }
 }

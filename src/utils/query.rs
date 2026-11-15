@@ -5,9 +5,7 @@
 /// Converte um filtro serializável em pares chave-valor para query string.
 ///
 /// Útil para enviar filtros estruturados como parâmetros de URL.
-pub fn filter_to_query<T: serde::Serialize>(
-    filter: Option<&T>,
-) -> Vec<(String, String)> {
+pub fn filter_to_query<T: serde::Serialize>(filter: Option<&T>) -> Vec<(String, String)> {
     match filter {
         None => Vec::new(),
         Some(f) => {
@@ -26,7 +24,7 @@ fn flatten_value(prefix: &str, value: &serde_json::Value) -> Vec<(String, String
                 let new_prefix = if prefix.is_empty() {
                     key.clone()
                 } else {
-                    format!("{}[{}]", prefix, key)
+                    format!("{prefix}[{key}]")
                 };
                 result.extend(flatten_value(&new_prefix, val));
             }
@@ -35,7 +33,7 @@ fn flatten_value(prefix: &str, value: &serde_json::Value) -> Vec<(String, String
         serde_json::Value::Array(arr) => {
             let mut result = Vec::new();
             for (i, val) in arr.iter().enumerate() {
-                let new_prefix = format!("{}[{}]", prefix, i);
+                let new_prefix = format!("{prefix}[{i}]");
                 result.extend(flatten_value(&new_prefix, val));
             }
             result

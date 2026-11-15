@@ -1,0 +1,14 @@
+# Configuração do rustfmt (apenas opções ESTÁVEIS).
+# A toolchain é estável (1.100), então opções `unstable` (ex.: `imports_granularity`,
+# `group_imports`, `wrap_comments`) não são usadas. Agrupar imports é feito à mão.
+
+edition = "2024"
+# Estilo do Style Guide (RFC 3338). `cargo fmt` infere da edition, mas o `rustfmt`
+# direto usa 2015 por padrão; explicitar evita divergência.
+style_edition = "2024"
+max_width = 100
+tab_spaces = 4
+newline_style = "Unix"
+hex_literal_case = "Lower"
+use_field_init_shorthand = true
+use_try_shorthand = true

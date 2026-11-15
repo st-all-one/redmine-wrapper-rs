@@ -7,7 +7,7 @@ use std::sync::Arc;
 use crate::core::errors::RedmineError;
 use crate::http::client::HttpClient;
 use crate::types::base::RedmineId;
-use crate::types::news::*;
+use crate::types::news::{CreateNewsPayload, News, UpdateNewsPayload};
 
 /// Recurso para operações com notícias do Redmine.
 #[derive(Debug)]
@@ -28,7 +28,10 @@ impl NewsResource {
     /// let all_news = client.news.list().await?;
     /// ```
     pub async fn list(&self) -> Result<Vec<News>, RedmineError> {
-        let (items, _total) = self.http.get_paginated("/news.json", "news", None, &[], "news.list").await?;
+        let (items, _total) = self
+            .http
+            .get_paginated("/news.json", "news", None, &[], "news.list")
+            .await?;
         Ok(items)
     }
 
@@ -42,8 +45,11 @@ impl NewsResource {
     /// let project_news = client.news.list_by_project(1).await?;
     /// ```
     pub async fn list_by_project(&self, project_id: RedmineId) -> Result<Vec<News>, RedmineError> {
-        let path = format!("/projects/{}/news.json", project_id);
-        let (items, _total) = self.http.get_paginated(&path, "news", None, &[], "news.list_by_project").await?;
+        let path = format!("/projects/{project_id}/news.json");
+        let (items, _total) = self
+            .http
+            .get_paginated(&path, "news", None, &[], "news.list_by_project")
+            .await?;
         Ok(items)
     }
 
@@ -57,7 +63,7 @@ impl NewsResource {
     /// let news = client.news.get(8).await?;
     /// ```
     pub async fn get(&self, id: RedmineId) -> Result<News, RedmineError> {
-        let path = format!("/news/{}.json", id);
+        let path = format!("/news/{id}.json");
         self.http.get_single(&path, "news", &[], "news.get").await
     }
 
@@ -71,10 +77,16 @@ impl NewsResource {
     /// ```rust,ignore
     /// let news = client.news.get_with_includes(8, &["attachments"]).await?;
     /// ```
-    pub async fn get_with_includes(&self, id: RedmineId, includes: &[&str]) -> Result<News, RedmineError> {
-        let path = format!("/news/{}.json", id);
+    pub async fn get_with_includes(
+        &self,
+        id: RedmineId,
+        includes: &[&str],
+    ) -> Result<News, RedmineError> {
+        let path = format!("/news/{id}.json");
         let query = vec![("include", includes.join(","))];
-        self.http.get_single(&path, "news", &query, "news.get_with_includes").await
+        self.http
+            .get_single(&path, "news", &query, "news.get_with_includes")
+            .await
     }
 
     /// Cria uma notícia em um projeto.
@@ -88,10 +100,16 @@ impl NewsResource {
     /// let payload = CreateNewsPayload { title: "Novidade".into(), summary: "Resumo".into(), ..Default::default() };
     /// let news = client.news.create(1, &payload).await?;
     /// ```
-    pub async fn create(&self, project_id: RedmineId, payload: &CreateNewsPayload) -> Result<News, RedmineError> {
-        let path = format!("/projects/{}/news.json", project_id);
+    pub async fn create(
+        &self,
+        project_id: RedmineId,
+        payload: &CreateNewsPayload,
+    ) -> Result<News, RedmineError> {
+        let path = format!("/projects/{project_id}/news.json");
         let body = serde_json::json!({ "news": payload });
-        self.http.post_single(&path, "news", &body, "news.create").await
+        self.http
+            .post_single(&path, "news", &body, "news.create")
+            .await
     }
 
     /// Atualiza uma notícia.
@@ -105,10 +123,16 @@ impl NewsResource {
     /// let payload = UpdateNewsPayload { title: Some("Título Atualizado".into()), ..Default::default() };
     /// client.news.update(8, &payload).await?;
     /// ```
-    pub async fn update(&self, id: RedmineId, payload: &UpdateNewsPayload) -> Result<(), RedmineError> {
-        let path = format!("/news/{}.json", id);
+    pub async fn update(
+        &self,
+        id: RedmineId,
+        payload: &UpdateNewsPayload,
+    ) -> Result<(), RedmineError> {
+        let path = format!("/news/{id}.json");
         let body = serde_json::json!({ "news": payload });
-        self.http.put::<serde_json::Value, _>(&path, &body, "news.update").await?;
+        self.http
+            .put::<serde_json::Value, _>(&path, &body, "news.update")
+            .await?;
         Ok(())
     }
 
@@ -122,7 +146,7 @@ impl NewsResource {
     /// client.news.delete(8).await?;
     /// ```
     pub async fn delete(&self, id: RedmineId) -> Result<(), RedmineError> {
-        let path = format!("/news/{}.json", id);
+        let path = format!("/news/{id}.json");
         self.http.delete(&path, &[], "news.delete").await
     }
 }

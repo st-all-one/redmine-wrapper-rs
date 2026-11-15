@@ -5,7 +5,7 @@
 **Wrapper Rust tipado para a API REST do Redmine — assíncrono, seguro, zero custo**
 
 [![License: MPL 2.0](https://img.shields.io/badge/License-MPL_2.0-2b3a42?style=for-the-badge)](https://opensource.org/licenses/MPL-2.0)
-[![Rust](https://img.shields.io/badge/Rust-1.85%2B-000000?style=for-the-badge&logo=rust&logoColor=white)](https://www.rust-lang.org)
+[![Rust](https://img.shields.io/badge/Rust-1.100%2B-000000?style=for-the-badge&logo=rust&logoColor=white)](https://www.rust-lang.org)
 [![Made in Brazil](https://img.shields.io/badge/Made_in-Brazil-009739?style=for-the-badge)](https://github.com/topics/brazil)
 
 </div>
@@ -313,7 +313,8 @@ cargo test                       # 31 testes (unitários + integração com wire
 cargo test --test client_test    # testes do cliente HTTP
 cargo test --test errors_test    # testes do sistema de erros
 cargo test --test pagination_test # testes de paginação
-cargo clippy                     # lints (0 warnings)
+cargo clippy --all-targets -- -D warnings # lints (0 warnings)
+cargo fmt --check                # formatação
 ```
 
 ```
@@ -328,7 +329,7 @@ test result: ok. 31 passed; 0 failed
 
 | Componente | Tecnologia |
 |---|---|
-| Runtime | Rust 1.85+ (edition 2024) |
+| Runtime | Rust 1.100+ (edition 2024) |
 | Async | `tokio` (sync, time) |
 | HTTP | `reqwest` 0.12 (async, rustls-tls) |
 | Serialização | `serde` + `serde_json` |
@@ -363,7 +364,7 @@ O servidor Redmine impõe um teto de 100 itens por página. O wrapper faz auto-p
 
 ## 📋 Pré-requisitos
 
-- **Rust 1.85+** (edição 2024) — verifique com `rustc --version`
+- **Rust 1.100+** (edição 2024) — verifique com `rustc --version`; o `rust-toolchain.toml` fixa o channel 1.100
 - **Chave de API Redmine** — gere em *Minha Conta → Chave de API* no seu Redmine
 
 ---

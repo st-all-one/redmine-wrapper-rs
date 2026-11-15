@@ -27,7 +27,10 @@ impl QueriesResource {
     /// let queries = client.queries.list().await?;
     /// ```
     pub async fn list(&self) -> Result<Vec<Query>, RedmineError> {
-        let (items, _total) = self.http.get_paginated("/queries.json", "queries", None, &[], "queries.list").await?;
+        let (items, _total) = self
+            .http
+            .get_paginated("/queries.json", "queries", None, &[], "queries.list")
+            .await?;
         Ok(items)
     }
 }

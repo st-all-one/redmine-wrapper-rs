@@ -7,7 +7,7 @@ use std::sync::Arc;
 use crate::core::errors::RedmineError;
 use crate::http::client::HttpClient;
 use crate::http::pagination::PaginationParams;
-use crate::types::search::*;
+use crate::types::search::{SearchFilter, SearchResult};
 
 /// Recurso para operações de busca textual.
 #[derive(Debug)]
@@ -34,13 +34,23 @@ impl SearchResource {
     pub async fn search(&self, filter: &SearchFilter) -> Result<Vec<SearchResult>, RedmineError> {
         use crate::utils::query::filter_to_query;
         let base = filter_to_query(Some(filter));
-        let query: Vec<(&str, String)> = base.iter().map(|(k, v)| (k.as_str(), v.clone())).collect();
+        let query: Vec<(&str, String)> =
+            base.iter().map(|(k, v)| (k.as_str(), v.clone())).collect();
 
         let params = PaginationParams {
             offset: filter.offset,
             limit: filter.limit,
         };
-        let (items, _total) = self.http.get_paginated("/search.json", "results", Some(&params), &query, "search.search").await?;
+        let (items, _total) = self
+            .http
+            .get_paginated(
+                "/search.json",
+                "results",
+                Some(&params),
+                &query,
+                "search.search",
+            )
+            .await?;
         Ok(items)
     }
 }

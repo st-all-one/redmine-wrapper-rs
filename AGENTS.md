@@ -5,7 +5,9 @@
 ```bash
 cargo build
 cargo test
-cargo clippy
+cargo fmt --check
+cargo clippy --all-targets -- -D warnings
+cargo doc --no-deps
 cargo check --example demo
 REDMINE_URL=https://redmine.example.com REDMINE_TOKEN=xxx cargo run --example demo
 ```
@@ -19,6 +21,39 @@ REDMINE_URL=https://redmine.example.com REDMINE_TOKEN=xxx cargo run --example de
 - **Logs**: `tracing` (structured, spans, `#[instrument]`)
 - **Correlation IDs**: `uuid` v7
 - **Rate limiting**: Sliding window manual (`tokio::sync::Mutex`)
+
+## Toolchain e MSRV
+
+- **Rust 1.100** (edition 2024), toolchain fixada em `rust-toolchain.toml` (`channel = "1.100"`,
+  componentes `clippy`/`rustfmt`, profile `minimal`). Não use API mais nova que a MSRV.
+- **Contrato de MSRV**: `rust-version = "1.100"` em `Cargo.toml` e `msrv = "1.100"` em
+  `clippy.toml` devem casar com a toolchain. `resolver = "3"` está declarado explicitamente.
+- **Supply chain** (`.cargo/config.toml`, Cargo 1.100): `min-publish-age = "7 days"` — versões
+  publicadas há menos de 7 dias não entram em resoluções novas; o `Cargo.lock` é autoritativo.
+- **Formatação**: `rustfmt.toml` com `style_edition = "2024"`, largura 100, indent 4, newline
+  Unix e hex minúsculo. Só opções estáveis; `cargo fmt --check` é portão.
+
+## Lints
+
+Os níveis ficam em `[lints]` no `Cargo.toml`; os valores, em `clippy.toml`.
+
+- `unsafe_code = "forbid"`; `unwrap_used = "deny"` (`expect()` com mensagem continua permitido
+  em produção, conforme a convenção abaixo).
+- Grupos `clippy::{all, correctness, suspicious, style, complexity, perf}` em `deny`;
+  `pedantic` e `nursery` em `warn` — o portão é `cargo clippy --all-targets -- -D warnings`.
+- `wildcard_imports`, `uninlined_format_args`, `doc_markdown`, `future_not_send`,
+  `cast_possible_truncation` e `unchecked_time_subtraction` são para **corrigir**, não silenciar.
+- Ruidosas isentadas: `missing_errors_doc`, `missing_panics_doc`, `must_use_candidate`,
+  `module_name_repetitions`, `missing_const_for_fn`, `assert_is_empty` (sugestão do Clippy 1.100
+  é pior que `assert!(x.is_empty())`).
+- `[lints.rust]` cobre `unused_qualifications`, `elided_lifetimes_in_paths`,
+  `single_use_lifetimes`, `trivial_casts`, `trivial_numeric_casts`, `unreachable_pub`,
+  `let_underscore_drop`, entre outros; `[lints.rustdoc]` nega links intra-doc quebrados.
+- `[lints.cargo]` (Cargo 1.100): `unused_dependencies` e `redundant_homepage` em `deny`.
+- `clippy.toml` proíbe `mem::transmute/forget/zeroed`, `process::exit` e as macros
+  `dbg!/todo!/unimplemented!/unreachable!/panic!`; guardas de `Mutex`/`RwLock`/`RefCell` não
+  podem atravessar `.await`.
+- Todo `#[allow]` pontual deve ter `reason` e escopo mínimo.
 
 ## Arquitetura
 
@@ -90,7 +125,8 @@ cargo test                      # todos os testes
 cargo test --test errors_test   # testes de erro
 cargo test --test client_test   # testes de integração (wiremock)
 cargo test --test pagination_test # testes de paginação
-cargo clippy                    # lints
+cargo clippy --all-targets -- -D warnings # portão de lints
+cargo fmt --check               # portão de formatação
 ```
 
 ## Exemplos

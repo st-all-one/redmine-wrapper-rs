@@ -37,7 +37,7 @@ impl SlidingWindow {
     /// Remove timestamps expirados e bloqueia a task atual se necessário.
     pub async fn acquire(&mut self) {
         let now = Instant::now();
-        let cutoff = now - self.window;
+        let cutoff = now.checked_sub(self.window).unwrap_or(now);
 
         // Remove timestamps expirados
         while let Some(&ts) = self.timestamps.front() {
@@ -51,7 +51,7 @@ impl SlidingWindow {
         if self.timestamps.len() >= self.max_requests as usize {
             // Aguarda até o timestamp mais antigo expirar
             if let Some(&oldest) = self.timestamps.front() {
-                let sleep_duration = cutoff - oldest + self.window;
+                let sleep_duration = cutoff.saturating_duration_since(oldest) + self.window;
                 tokio::time::sleep(sleep_duration).await;
             }
             // Após dormir, remove o timestamp mais antigo
@@ -77,6 +77,10 @@ mod tests {
     }
 
     #[tokio::test]
+    #[allow(
+        clippy::unchecked_time_subtraction,
+        reason = "uptime do processo é muito maior que 2s"
+    )]
     async fn test_evicts_expired_timestamps() {
         let mut limiter = SlidingWindow::new(5);
         let past = Instant::now() - Duration::from_secs(2);

@@ -2,8 +2,8 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-use serde::{Deserialize, Serialize};
 use crate::types::base::IdName;
+use serde::{Deserialize, Serialize};
 
 /// Referência a uma página pai na hierarquia wiki (contém apenas título).
 #[derive(Debug, Clone, Serialize, Deserialize)]

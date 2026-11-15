@@ -2,8 +2,8 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+use crate::types::base::{IdName, RedmineId};
 use serde::{Deserialize, Serialize};
-use crate::types::base::{RedmineId, IdName};
 
 /// Status de um projeto no Redmine.
 ///
@@ -19,7 +19,7 @@ pub enum ProjectStatus {
     Archived = 9,
 }
 
-impl serde::Serialize for ProjectStatus {
+impl Serialize for ProjectStatus {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: serde::Serializer,
@@ -28,7 +28,7 @@ impl serde::Serialize for ProjectStatus {
     }
 }
 
-impl<'de> serde::Deserialize<'de> for ProjectStatus {
+impl<'de> Deserialize<'de> for ProjectStatus {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: serde::Deserializer<'de>,
@@ -36,10 +36,10 @@ impl<'de> serde::Deserialize<'de> for ProjectStatus {
         use serde::de;
 
         struct Visitor;
-        impl<'de> de::Visitor<'de> for Visitor {
+        impl de::Visitor<'_> for Visitor {
             type Value = ProjectStatus;
 
-            fn expecting(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+            fn expecting(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
                 f.write_str("número (1, 5, 9) ou string (\"1\", \"5\", \"9\")")
             }
 

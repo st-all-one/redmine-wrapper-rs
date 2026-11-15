@@ -34,7 +34,7 @@ pub struct SearchFilter {
     /// Número máximo de resultados por página.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub limit: Option<u32>,
-    /// Escopo da busca (ex: "all", "my_project").
+    /// Escopo da busca (ex.: `all`, `my_project`).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub scope: Option<String>,
     /// Se verdadeiro, busca por todas as palavras (e não qualquer uma).

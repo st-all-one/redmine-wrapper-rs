@@ -7,7 +7,7 @@ use std::sync::Arc;
 use crate::core::errors::RedmineError;
 use crate::http::client::HttpClient;
 use crate::types::base::RedmineId;
-use crate::types::file::*;
+use crate::types::file::{CreateFilePayload, File};
 
 /// Recurso para operações com arquivos de projetos.
 #[derive(Debug)]
@@ -31,8 +31,11 @@ impl FilesResource {
     /// let files = client.files.list_by_project(1).await?;
     /// ```
     pub async fn list_by_project(&self, project_id: RedmineId) -> Result<Vec<File>, RedmineError> {
-        let path = format!("/projects/{}/files.json", project_id);
-        let (items, _total) = self.http.get_paginated(&path, "files", None, &[], "files.list_by_project").await?;
+        let path = format!("/projects/{project_id}/files.json");
+        let (items, _total) = self
+            .http
+            .get_paginated(&path, "files", None, &[], "files.list_by_project")
+            .await?;
         Ok(items)
     }
 
@@ -50,9 +53,15 @@ impl FilesResource {
     /// let payload = CreateFilePayload { token, filename: "relatorio.pdf".into(), ..Default::default() };
     /// let file = client.files.attach_to_project(1, &payload).await?;
     /// ```
-    pub async fn attach_to_project(&self, project_id: RedmineId, payload: &CreateFilePayload) -> Result<File, RedmineError> {
-        let path = format!("/projects/{}/files.json", project_id);
+    pub async fn attach_to_project(
+        &self,
+        project_id: RedmineId,
+        payload: &CreateFilePayload,
+    ) -> Result<File, RedmineError> {
+        let path = format!("/projects/{project_id}/files.json");
         let body = serde_json::json!({ "file": payload });
-        self.http.post_single(&path, "file", &body, "files.attach_to_project").await
+        self.http
+            .post_single(&path, "file", &body, "files.attach_to_project")
+            .await
     }
 }

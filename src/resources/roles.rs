@@ -28,7 +28,10 @@ impl RolesResource {
     /// let roles = client.roles.list().await?;
     /// ```
     pub async fn list(&self) -> Result<Vec<Role>, RedmineError> {
-        let (items, _total) = self.http.get_paginated("/roles.json", "roles", None, &[], "roles.list").await?;
+        let (items, _total) = self
+            .http
+            .get_paginated("/roles.json", "roles", None, &[], "roles.list")
+            .await?;
         Ok(items)
     }
 
@@ -42,7 +45,7 @@ impl RolesResource {
     /// let role = client.roles.get(4).await?;
     /// ```
     pub async fn get(&self, id: RedmineId) -> Result<Role, RedmineError> {
-        let path = format!("/roles/{}.json", id);
+        let path = format!("/roles/{id}.json");
         self.http.get_single(&path, "role", &[], "roles.get").await
     }
 }

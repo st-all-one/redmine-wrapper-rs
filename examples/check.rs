@@ -6,7 +6,8 @@
 //!
 //! Avalia todos os 22 recursos da API em modo **somente leitura**:
 //! nenhum dado e criado, alterado ou excluido.
-#![allow(clippy::unwrap_used, clippy::pedantic)]
+// Exemplo binário: o exit code 1 sinaliza falhas do check.
+#![allow(clippy::unwrap_used, clippy::pedantic, clippy::disallowed_methods)]
 //!
 //! Uso:
 //! ```bash
@@ -20,14 +21,14 @@ use std::env;
 use std::fmt;
 use std::sync::atomic::{AtomicU32, Ordering};
 
-use tracing_subscriber::EnvFilter;
+use redmine_wrapper::RedmineClient;
 use redmine_wrapper::core::config::RedmineConfigBuilder;
 use redmine_wrapper::core::errors::RedmineError;
 use redmine_wrapper::types::base::RedmineId;
 use redmine_wrapper::types::issue::IssueFilter;
 use redmine_wrapper::types::search::SearchFilter;
 use redmine_wrapper::types::time_entry::TimeEntryFilter;
-use redmine_wrapper::RedmineClient;
+use tracing_subscriber::EnvFilter;
 
 static PASS: AtomicU32 = AtomicU32::new(0);
 static FAIL: AtomicU32 = AtomicU32::new(0);
@@ -78,7 +79,9 @@ macro_rules! section {
 #[tokio::main]
 async fn main() {
     if env::var("RUST_LOG").is_ok() {
-        tracing_subscriber::fmt().with_env_filter(EnvFilter::from_default_env()).init();
+        tracing_subscriber::fmt()
+            .with_env_filter(EnvFilter::from_default_env())
+            .init();
     }
 
     let base_url = env::var("REDMINE_URL").expect("REDMINE_URL não definida");
@@ -104,8 +107,19 @@ async fn main() {
     section!("my_account");
     {
         match client.my_account.get().await {
-            Ok(a) => ok("my_account.get", format_args!("#{} {} {}", a.id, a.firstname.as_deref().unwrap_or("?"), a.lastname.as_deref().unwrap_or("?"))),
-            Err(RedmineError::Api { ref category, .. }) if category.http_status() == 403 => skip("my_account.get", "sem permissão (403) — token pode ser anônimo"),
+            Ok(a) => ok(
+                "my_account.get",
+                format_args!(
+                    "#{} {} {}",
+                    a.id,
+                    a.firstname.as_deref().unwrap_or("?"),
+                    a.lastname.as_deref().unwrap_or("?")
+                ),
+            ),
+            Err(RedmineError::Api { ref category, .. }) if category.http_status() == 403 => skip(
+                "my_account.get",
+                "sem permissão (403) — token pode ser anônimo",
+            ),
             Err(e) => fail("my_account.get", e),
         }
     }
@@ -121,11 +135,21 @@ async fn main() {
                 if let Some(p) = list.first() {
                     let pid = p.id;
                     match client.projects.get(pid).await {
-                        Ok(p2) => ok("projects.get", format_args!("#{} {}", p2.id, p2.name.as_deref().unwrap_or("?"))),
+                        Ok(p2) => ok(
+                            "projects.get",
+                            format_args!("#{} {}", p2.id, p2.name.as_deref().unwrap_or("?")),
+                        ),
                         Err(e) => fail("projects.get", e),
                     }
-                    match client.projects.get_with_includes(pid, &["trackers", "issue_categories"]).await {
-                        Ok(p2) => ok("projects.get_with_includes", format_args!("#{} com includes", p2.id)),
+                    match client
+                        .projects
+                        .get_with_includes(pid, &["trackers", "issue_categories"])
+                        .await
+                    {
+                        Ok(p2) => ok(
+                            "projects.get_with_includes",
+                            format_args!("#{} com includes", p2.id),
+                        ),
                         Err(e) => fail("projects.get_with_includes", e),
                     }
                 } else {
@@ -133,7 +157,9 @@ async fn main() {
                     skip("projects.get_with_includes", "nenhum projeto disponível");
                 }
             }
-            Err(RedmineError::Api { ref category, .. }) if category.http_status() == 403 => skip("projects.list", "sem permissão (403)"),
+            Err(RedmineError::Api { ref category, .. }) if category.http_status() == 403 => {
+                skip("projects.list", "sem permissão (403)")
+            }
             Err(e) => fail("projects.list", e),
         }
     }
@@ -144,8 +170,18 @@ async fn main() {
     section!("users");
     {
         match client.users.get_current().await {
-            Ok(u) => ok("users.get_current", format_args!("#{} {} {}", u.id, u.firstname.as_deref().unwrap_or("?"), u.lastname.as_deref().unwrap_or("?"))),
-            Err(RedmineError::Api { ref category, .. }) if category.http_status() == 403 => skip("users.get_current", "sem permissão (403)"),
+            Ok(u) => ok(
+                "users.get_current",
+                format_args!(
+                    "#{} {} {}",
+                    u.id,
+                    u.firstname.as_deref().unwrap_or("?"),
+                    u.lastname.as_deref().unwrap_or("?")
+                ),
+            ),
+            Err(RedmineError::Api { ref category, .. }) if category.http_status() == 403 => {
+                skip("users.get_current", "sem permissão (403)")
+            }
             Err(e) => fail("users.get_current", e),
         }
         match client.users.list(None).await {
@@ -154,11 +190,21 @@ async fn main() {
                 if let Some(u) = list.first() {
                     let uid = u.id;
                     match client.users.get(uid).await {
-                        Ok(u2) => ok("users.get", format_args!("#{} {}", u2.id, u2.login.as_deref().unwrap_or("?"))),
+                        Ok(u2) => ok(
+                            "users.get",
+                            format_args!("#{} {}", u2.id, u2.login.as_deref().unwrap_or("?")),
+                        ),
                         Err(e) => fail("users.get", e),
                     }
-                    match client.users.get_with_includes(uid, &["memberships", "groups"]).await {
-                        Ok(u2) => ok("users.get_with_includes", format_args!("#{} com includes", u2.id)),
+                    match client
+                        .users
+                        .get_with_includes(uid, &["memberships", "groups"])
+                        .await
+                    {
+                        Ok(u2) => ok(
+                            "users.get_with_includes",
+                            format_args!("#{} com includes", u2.id),
+                        ),
                         Err(e) => fail("users.get_with_includes", e),
                     }
                 } else {
@@ -185,15 +231,28 @@ async fn main() {
                     let iid = iss.id;
                     first_issue_id = Some(iid);
                     match client.issues.get(iid).await {
-                        Ok(i) => ok("issues.get", format_args!("#{} {}", i.id, i.subject.as_deref().unwrap_or("?"))),
+                        Ok(i) => ok(
+                            "issues.get",
+                            format_args!("#{} {}", i.id, i.subject.as_deref().unwrap_or("?")),
+                        ),
                         Err(e) => fail("issues.get", e),
                     }
-                    match client.issues.get_with_includes(iid, &["journals", "attachments", "relations"]).await {
-                        Ok(i) => ok("issues.get_with_includes", format_args!("#{} com includes", i.id)),
+                    match client
+                        .issues
+                        .get_with_includes(iid, &["journals", "attachments", "relations"])
+                        .await
+                    {
+                        Ok(i) => ok(
+                            "issues.get_with_includes",
+                            format_args!("#{} com includes", i.id),
+                        ),
                         Err(e) => fail("issues.get_with_includes", e),
                     }
                     match client.issues.get_allowed_statuses(iid).await {
-                        Ok(statuses) => ok("issues.get_allowed_statuses", format_args!("{} status(is) permitido(s)", statuses.len())),
+                        Ok(statuses) => ok(
+                            "issues.get_allowed_statuses",
+                            format_args!("{} status(is) permitido(s)", statuses.len()),
+                        ),
                         Err(e) => fail("issues.get_allowed_statuses", e),
                     }
                 } else {
@@ -202,7 +261,9 @@ async fn main() {
                     skip("issues.get_allowed_statuses", "nenhuma issue disponível");
                 }
             }
-            Err(RedmineError::Api { ref category, .. }) if category.http_status() == 403 => skip("issues.list", "sem permissão (403)"),
+            Err(RedmineError::Api { ref category, .. }) if category.http_status() == 403 => {
+                skip("issues.list", "sem permissão (403)")
+            }
             Err(e) => fail("issues.list", e),
         }
         // Testa filtro básico
@@ -211,7 +272,10 @@ async fn main() {
             ..Default::default()
         };
         match client.issues.list(Some(&filter)).await {
-            Ok(list) => ok("issues.list (filtro open)", format_args!("{} issue(s) abertas", list.len())),
+            Ok(list) => ok(
+                "issues.list (filtro open)",
+                format_args!("{} issue(s) abertas", list.len()),
+            ),
             Err(e) => fail("issues.list (filtro open)", e),
         }
     }
@@ -223,17 +287,25 @@ async fn main() {
     {
         match client.time_entries.list(None).await {
             Ok(list) => {
-                ok("time_entries.list", format_args!("{} apontamento(s)", list.len()));
+                ok(
+                    "time_entries.list",
+                    format_args!("{} apontamento(s)", list.len()),
+                );
                 if let Some(te) = list.first() {
                     match client.time_entries.get(te.id).await {
-                        Ok(t) => ok("time_entries.get", format_args!("#{} {:.1}h", t.id, t.hours.unwrap_or(0.0))),
+                        Ok(t) => ok(
+                            "time_entries.get",
+                            format_args!("#{} {:.1}h", t.id, t.hours.unwrap_or(0.0)),
+                        ),
                         Err(e) => fail("time_entries.get", e),
                     }
                 } else {
                     skip("time_entries.get", "nenhum apontamento disponível");
                 }
             }
-            Err(RedmineError::Api { ref category, .. }) if category.http_status() == 403 => skip("time_entries.list", "sem permissão (403)"),
+            Err(RedmineError::Api { ref category, .. }) if category.http_status() == 403 => {
+                skip("time_entries.list", "sem permissão (403)")
+            }
             Err(e) => fail("time_entries.list", e),
         }
         // Testa filtro por período
@@ -243,7 +315,10 @@ async fn main() {
             ..Default::default()
         };
         match client.time_entries.list(Some(&filter)).await {
-            Ok(list) => ok("time_entries.list (filtro período)", format_args!("{} apontamento(s)", list.len())),
+            Ok(list) => ok(
+                "time_entries.list (filtro período)",
+                format_args!("{} apontamento(s)", list.len()),
+            ),
             Err(e) => fail("time_entries.list (filtro período)", e),
         }
     }
@@ -258,7 +333,10 @@ async fn main() {
                 Ok(i) => {
                     let count = i.journals.as_ref().map(|j| j.len()).unwrap_or(0);
                     if count > 0 {
-                        ok("journals (via issue includes)", format_args!("{} journal(is) na issue #{}", count, iid));
+                        ok(
+                            "journals (via issue includes)",
+                            format_args!("{} journal(is) na issue #{}", count, iid),
+                        );
                     } else {
                         skip("journals (via issue includes)", "issue sem journals");
                     }
@@ -277,7 +355,10 @@ async fn main() {
     {
         if let Some(iid) = first_issue_id {
             match client.relations.list_by_issue(iid).await {
-                Ok(rels) => ok("relations.list_by_issue", format_args!("{} relação(ões) na issue #{}", rels.len(), iid)),
+                Ok(rels) => ok(
+                    "relations.list_by_issue",
+                    format_args!("{} relação(ões) na issue #{}", rels.len(), iid),
+                ),
                 Err(e) => fail("relations.list_by_issue", e),
             }
         } else {
@@ -296,7 +377,14 @@ async fn main() {
                     if let Some(atts) = i.attachments {
                         if let Some(a) = atts.first() {
                             match client.attachments.get(a.id).await {
-                                Ok(att) => ok("attachments.get", format_args!("#{} ({})", a.id, att.filename.as_deref().unwrap_or("?"))),
+                                Ok(att) => ok(
+                                    "attachments.get",
+                                    format_args!(
+                                        "#{} ({})",
+                                        a.id,
+                                        att.filename.as_deref().unwrap_or("?")
+                                    ),
+                                ),
                                 Err(e) => fail("attachments.get", e),
                             }
                         } else {
@@ -324,21 +412,50 @@ async fn main() {
                     let pid = p.id;
                     match client.wiki.list(pid).await {
                         Ok(pages) => {
-                            ok("wiki.list", format_args!("{} página(s) no projeto #{}", pages.len(), pid));
+                            ok(
+                                "wiki.list",
+                                format_args!("{} página(s) no projeto #{}", pages.len(), pid),
+                            );
                             if let Some(wp) = pages.first() {
                                 match client.wiki.get(pid, &wp.title, None).await {
-                                    Ok(page) => ok("wiki.get", format_args!("'{}' (v{})", page.title.as_deref().unwrap_or("?"), page.version.unwrap_or(0))),
+                                    Ok(page) => ok(
+                                        "wiki.get",
+                                        format_args!(
+                                            "'{}' (v{})",
+                                            page.title.as_deref().unwrap_or("?"),
+                                            page.version.unwrap_or(0)
+                                        ),
+                                    ),
                                     Err(e) => fail("wiki.get", e),
                                 }
-                                match client.wiki.get(pid, &wp.title, Some(&["attachments"])).await {
-                                    Ok(page) => ok("wiki.get (com includes)", format_args!("'{}' c/ anexos", page.title.as_deref().unwrap_or("?"))),
+                                match client
+                                    .wiki
+                                    .get(pid, &wp.title, Some(&["attachments"]))
+                                    .await
+                                {
+                                    Ok(page) => ok(
+                                        "wiki.get (com includes)",
+                                        format_args!(
+                                            "'{}' c/ anexos",
+                                            page.title.as_deref().unwrap_or("?")
+                                        ),
+                                    ),
                                     Err(e) => fail("wiki.get (com includes)", e),
                                 }
                                 // Tenta acessar versão 1 da página
                                 match client.wiki.get_version(pid, &wp.title, 1).await {
-                                    Ok(page) => ok("wiki.get_version", format_args!("'{}' v1", page.title.as_deref().unwrap_or("?"))),
+                                    Ok(page) => ok(
+                                        "wiki.get_version",
+                                        format_args!(
+                                            "'{}' v1",
+                                            page.title.as_deref().unwrap_or("?")
+                                        ),
+                                    ),
                                     Err(e) => {
-                                        skip("wiki.get_version", format_args!("versão 1 não acessível: {e}"));
+                                        skip(
+                                            "wiki.get_version",
+                                            format_args!("versão 1 não acessível: {e}"),
+                                        );
                                     }
                                 }
                             } else {
@@ -347,7 +464,11 @@ async fn main() {
                                 skip("wiki.get_version", "projeto sem páginas wiki");
                             }
                         }
-                        Err(RedmineError::Api { ref category, .. }) if category.http_status() == 403 => skip("wiki.list", "sem permissão (403)"),
+                        Err(RedmineError::Api { ref category, .. })
+                            if category.http_status() == 403 =>
+                        {
+                            skip("wiki.list", "sem permissão (403)")
+                        }
                         Err(e) => fail("wiki.list", e),
                     }
                 } else {
@@ -358,7 +479,10 @@ async fn main() {
                 }
             }
             Err(e) => {
-                skip("wiki.list", format_args!("não foi possível listar projetos: {e}"));
+                skip(
+                    "wiki.list",
+                    format_args!("não foi possível listar projetos: {e}"),
+                );
             }
         }
     }
@@ -374,17 +498,31 @@ async fn main() {
                     let pid = p.id;
                     match client.versions.list_by_project(pid).await {
                         Ok(list) => {
-                            ok("versions.list_by_project", format_args!("{} versão(ões)", list.len()));
+                            ok(
+                                "versions.list_by_project",
+                                format_args!("{} versão(ões)", list.len()),
+                            );
                             if let Some(v) = list.first() {
                                 match client.versions.get(v.id).await {
-                                    Ok(v2) => ok("versions.get", format_args!("#{} {}", v2.id, v2.name.as_deref().unwrap_or("?"))),
+                                    Ok(v2) => ok(
+                                        "versions.get",
+                                        format_args!(
+                                            "#{} {}",
+                                            v2.id,
+                                            v2.name.as_deref().unwrap_or("?")
+                                        ),
+                                    ),
                                     Err(e) => fail("versions.get", e),
                                 }
                             } else {
                                 skip("versions.get", "projeto sem versões");
                             }
                         }
-                        Err(RedmineError::Api { ref category, .. }) if category.http_status() == 403 => skip("versions.list_by_project", "sem permissão (403)"),
+                        Err(RedmineError::Api { ref category, .. })
+                            if category.http_status() == 403 =>
+                        {
+                            skip("versions.list_by_project", "sem permissão (403)")
+                        }
                         Err(e) => fail("versions.list_by_project", e),
                     }
                 } else {
@@ -393,7 +531,10 @@ async fn main() {
                 }
             }
             Err(e) => {
-                skip("versions.list_by_project", format_args!("não foi possível listar projetos: {e}"));
+                skip(
+                    "versions.list_by_project",
+                    format_args!("não foi possível listar projetos: {e}"),
+                );
             }
         }
     }
@@ -404,15 +545,24 @@ async fn main() {
     section!("enumerations");
     {
         match client.enumerations.list_issue_priorities().await {
-            Ok(list) => ok("enumerations.list_issue_priorities", format_args!("{} prioridade(s)", list.len())),
+            Ok(list) => ok(
+                "enumerations.list_issue_priorities",
+                format_args!("{} prioridade(s)", list.len()),
+            ),
             Err(e) => fail("enumerations.list_issue_priorities", e),
         }
         match client.enumerations.list_time_entry_activities().await {
-            Ok(list) => ok("enumerations.list_time_entry_activities", format_args!("{} atividade(s)", list.len())),
+            Ok(list) => ok(
+                "enumerations.list_time_entry_activities",
+                format_args!("{} atividade(s)", list.len()),
+            ),
             Err(e) => fail("enumerations.list_time_entry_activities", e),
         }
         match client.enumerations.list_document_categories().await {
-            Ok(list) => ok("enumerations.list_document_categories", format_args!("{} categoria(s) de documento", list.len())),
+            Ok(list) => ok(
+                "enumerations.list_document_categories",
+                format_args!("{} categoria(s) de documento", list.len()),
+            ),
             Err(e) => fail("enumerations.list_document_categories", e),
         }
     }
@@ -450,26 +600,46 @@ async fn main() {
                     let pid = p.id;
                     match client.issue_categories.list_by_project(pid).await {
                         Ok(list) => {
-                            ok("issue_categories.list_by_project", format_args!("{} categoria(s)", list.len()));
+                            ok(
+                                "issue_categories.list_by_project",
+                                format_args!("{} categoria(s)", list.len()),
+                            );
                             if let Some(c) = list.first() {
                                 match client.issue_categories.get(c.id).await {
-                                    Ok(cat) => ok("issue_categories.get", format_args!("#{} {}", cat.id, cat.name.as_deref().unwrap_or("?"))),
+                                    Ok(cat) => ok(
+                                        "issue_categories.get",
+                                        format_args!(
+                                            "#{} {}",
+                                            cat.id,
+                                            cat.name.as_deref().unwrap_or("?")
+                                        ),
+                                    ),
                                     Err(e) => fail("issue_categories.get", e),
                                 }
                             } else {
                                 skip("issue_categories.get", "projeto sem categorias");
                             }
                         }
-                        Err(RedmineError::Api { ref category, .. }) if category.http_status() == 403 => skip("issue_categories.list_by_project", "sem permissão (403)"),
+                        Err(RedmineError::Api { ref category, .. })
+                            if category.http_status() == 403 =>
+                        {
+                            skip("issue_categories.list_by_project", "sem permissão (403)")
+                        }
                         Err(e) => fail("issue_categories.list_by_project", e),
                     }
                 } else {
-                    skip("issue_categories.list_by_project", "nenhum projeto disponível");
+                    skip(
+                        "issue_categories.list_by_project",
+                        "nenhum projeto disponível",
+                    );
                     skip("issue_categories.get", "nenhum projeto disponível");
                 }
             }
             Err(e) => {
-                skip("issue_categories.list_by_project", format_args!("não foi possível listar projetos: {e}"));
+                skip(
+                    "issue_categories.list_by_project",
+                    format_args!("não foi possível listar projetos: {e}"),
+                );
             }
         }
     }
@@ -485,7 +655,10 @@ async fn main() {
                     let pid = p.id;
                     match client.memberships.list_by_project(pid).await {
                         Ok(list) => {
-                            ok("memberships.list_by_project", format_args!("{} associação(ões)", list.len()));
+                            ok(
+                                "memberships.list_by_project",
+                                format_args!("{} associação(ões)", list.len()),
+                            );
                             if let Some(m) = list.first() {
                                 match client.memberships.get(m.id).await {
                                     Ok(_) => ok("memberships.get", format_args!("#{}", m.id)),
@@ -495,7 +668,11 @@ async fn main() {
                                 skip("memberships.get", "projeto sem associações");
                             }
                         }
-                        Err(RedmineError::Api { ref category, .. }) if category.http_status() == 403 => skip("memberships.list_by_project", "sem permissão (403)"),
+                        Err(RedmineError::Api { ref category, .. })
+                            if category.http_status() == 403 =>
+                        {
+                            skip("memberships.list_by_project", "sem permissão (403)")
+                        }
                         Err(e) => fail("memberships.list_by_project", e),
                     }
                 } else {
@@ -504,7 +681,10 @@ async fn main() {
                 }
             }
             Err(e) => {
-                skip("memberships.list_by_project", format_args!("não foi possível listar projetos: {e}"));
+                skip(
+                    "memberships.list_by_project",
+                    format_args!("não foi possível listar projetos: {e}"),
+                );
             }
         }
     }
@@ -519,14 +699,19 @@ async fn main() {
                 ok("roles.list", format_args!("{} papel(éis)", list.len()));
                 if let Some(r) = list.first() {
                     match client.roles.get(r.id).await {
-                        Ok(role) => ok("roles.get", format_args!("#{} {}", role.id, role.name.as_deref().unwrap_or("?"))),
+                        Ok(role) => ok(
+                            "roles.get",
+                            format_args!("#{} {}", role.id, role.name.as_deref().unwrap_or("?")),
+                        ),
                         Err(e) => fail("roles.get", e),
                     }
                 } else {
                     skip("roles.get", "nenhum papel disponível");
                 }
             }
-            Err(RedmineError::Api { ref category, .. }) if category.http_status() == 403 => skip("roles.list", "sem permissão (403)"),
+            Err(RedmineError::Api { ref category, .. }) if category.http_status() == 403 => {
+                skip("roles.list", "sem permissão (403)")
+            }
             Err(e) => fail("roles.list", e),
         }
     }
@@ -542,11 +727,21 @@ async fn main() {
                 if let Some(g) = list.first() {
                     let gid = g.id;
                     match client.groups.get(gid).await {
-                        Ok(g2) => ok("groups.get", format_args!("#{} {}", g2.id, g2.name.as_deref().unwrap_or("?"))),
+                        Ok(g2) => ok(
+                            "groups.get",
+                            format_args!("#{} {}", g2.id, g2.name.as_deref().unwrap_or("?")),
+                        ),
                         Err(e) => fail("groups.get", e),
                     }
-                    match client.groups.get_with_includes(gid, &["users", "memberships"]).await {
-                        Ok(g2) => ok("groups.get_with_includes", format_args!("#{} com includes", g2.id)),
+                    match client
+                        .groups
+                        .get_with_includes(gid, &["users", "memberships"])
+                        .await
+                    {
+                        Ok(g2) => ok(
+                            "groups.get_with_includes",
+                            format_args!("#{} com includes", g2.id),
+                        ),
                         Err(e) => fail("groups.get_with_includes", e),
                     }
                 } else {
@@ -565,8 +760,13 @@ async fn main() {
     section!("custom_fields");
     {
         match client.custom_fields.list().await {
-            Ok(list) => ok("custom_fields.list", format_args!("{} campo(s)", list.len())),
-            Err(ref e) if is_auth_err(e) => skip("custom_fields.list", "sem permissão — requer admin"),
+            Ok(list) => ok(
+                "custom_fields.list",
+                format_args!("{} campo(s)", list.len()),
+            ),
+            Err(ref e) if is_auth_err(e) => {
+                skip("custom_fields.list", "sem permissão — requer admin")
+            }
             Err(e) => fail("custom_fields.list", e),
         }
     }
@@ -592,8 +792,13 @@ async fn main() {
                 if let Some(p) = projects.first() {
                     let pid = p.id;
                     match client.files.list_by_project(pid).await {
-                        Ok(list) => ok("files.list_by_project", format_args!("{} arquivo(s)", list.len())),
-                        Err(ref e) if is_auth_err(e) => skip("files.list_by_project", "sem permissão"),
+                        Ok(list) => ok(
+                            "files.list_by_project",
+                            format_args!("{} arquivo(s)", list.len()),
+                        ),
+                        Err(ref e) if is_auth_err(e) => {
+                            skip("files.list_by_project", "sem permissão")
+                        }
                         Err(e) => fail("files.list_by_project", e),
                     }
                 } else {
@@ -601,7 +806,10 @@ async fn main() {
                 }
             }
             Err(e) => {
-                skip("files.list_by_project", format_args!("não foi possível listar projetos: {e}"));
+                skip(
+                    "files.list_by_project",
+                    format_args!("não foi possível listar projetos: {e}"),
+                );
             }
         }
     }
@@ -630,7 +838,9 @@ async fn main() {
         };
         match client.search.search(&filter).await {
             Ok(list) => ok("search.search", format_args!("{} resultado(s)", list.len())),
-            Err(RedmineError::Api { ref category, .. }) if category.http_status() == 403 => skip("search.search", "sem permissão (403)"),
+            Err(RedmineError::Api { ref category, .. }) if category.http_status() == 403 => {
+                skip("search.search", "sem permissão (403)")
+            }
             Err(e) => fail("search.search", e),
         }
     }
@@ -652,15 +862,24 @@ async fn main() {
                     skip("news.get", "nenhuma notícia disponível");
                 }
             }
-            Err(RedmineError::Api { ref category, .. }) if category.http_status() == 403 => skip("news.list", "sem permissão (403)"),
+            Err(RedmineError::Api { ref category, .. }) if category.http_status() == 403 => {
+                skip("news.list", "sem permissão (403)")
+            }
             Err(e) => fail("news.list", e),
         }
         match client.projects.list().await {
             Ok(projects) => {
                 if let Some(p) = projects.first() {
                     match client.news.list_by_project(p.id).await {
-                        Ok(list) => ok("news.list_by_project", format_args!("{} notícia(s) no projeto #{}", list.len(), p.id)),
-                        Err(RedmineError::Api { ref category, .. }) if category.http_status() == 403 => skip("news.list_by_project", "sem permissão (403)"),
+                        Ok(list) => ok(
+                            "news.list_by_project",
+                            format_args!("{} notícia(s) no projeto #{}", list.len(), p.id),
+                        ),
+                        Err(RedmineError::Api { ref category, .. })
+                            if category.http_status() == 403 =>
+                        {
+                            skip("news.list_by_project", "sem permissão (403)")
+                        }
                         Err(e) => fail("news.list_by_project", e),
                     }
                 } else {
@@ -668,7 +887,10 @@ async fn main() {
                 }
             }
             Err(e) => {
-                skip("news.list_by_project", format_args!("não foi possível listar projetos: {e}"));
+                skip(
+                    "news.list_by_project",
+                    format_args!("não foi possível listar projetos: {e}"),
+                );
             }
         }
     }

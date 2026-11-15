@@ -27,6 +27,8 @@ impl MyAccountResource {
     /// let account = client.my_account.get().await?;
     /// ```
     pub async fn get(&self) -> Result<MyAccount, RedmineError> {
-        self.http.get_single("/my/account.json", "user", &[], "my_account.get").await
+        self.http
+            .get_single("/my/account.json", "user", &[], "my_account.get")
+            .await
     }
 }

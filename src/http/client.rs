@@ -2,10 +2,10 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-use reqwest::header::{HeaderMap, HeaderValue, CONTENT_TYPE};
+use reqwest::header::{CONTENT_TYPE, HeaderMap, HeaderValue};
 use reqwest::{Client, RequestBuilder, Response};
-use serde::de::DeserializeOwned;
 use serde::Serialize;
+use serde::de::DeserializeOwned;
 use tokio::sync::Mutex;
 use tracing::instrument;
 use url::form_urlencoded::Serializer as UrlSerializer;
@@ -27,8 +27,8 @@ pub(crate) struct HttpClient {
 }
 
 impl HttpClient {
-    /// Cria um novo HttpClient a partir da config resolvida.
-    pub fn new(config: RedmineConfig) -> Result<Self, RedmineError> {
+    /// Cria um novo `HttpClient` a partir da config resolvida.
+    pub(crate) fn new(config: RedmineConfig) -> Result<Self, RedmineError> {
         let mut headers = HeaderMap::new();
         headers.insert(CONTENT_TYPE, HeaderValue::from_static("application/json"));
 
@@ -47,28 +47,25 @@ impl HttpClient {
     }
 
     /// Executa uma requisição GET e desserializa a resposta JSON.
-    pub async fn get<T: DeserializeOwned>(
+    pub(crate) async fn get<T: DeserializeOwned>(
         &self,
         path: &str,
         query: &[(&str, String)],
         operation: &str,
     ) -> Result<T, RedmineError> {
-        let url = self.build_url(path, query)?;
-        let builder = self
-            .client
-            .get(&url)
-            .headers(self.auth_headers());
+        let url = self.build_url(path, query);
+        let builder = self.client.get(&url).headers(self.auth_headers());
         self.execute(builder, operation).await
     }
 
     /// Executa uma requisição POST com corpo JSON e desserializa a resposta.
-    pub async fn post<T: DeserializeOwned, B: Serialize>(
+    pub(crate) async fn post<T: DeserializeOwned, B: Serialize + Sync>(
         &self,
         path: &str,
         body: &B,
         operation: &str,
     ) -> Result<T, RedmineError> {
-        let url = self.build_url(path, &[])?;
+        let url = self.build_url(path, &[]);
         let json_body = serde_json::to_string(body)?;
         let builder = self
             .client
@@ -79,14 +76,14 @@ impl HttpClient {
     }
 
     /// Executa uma requisição POST com dados binários (upload de arquivos).
-    pub async fn post_binary<T: DeserializeOwned>(
+    pub(crate) async fn post_binary<T: DeserializeOwned>(
         &self,
         path: &str,
         data: &[u8],
         content_type: &str,
         operation: &str,
     ) -> Result<T, RedmineError> {
-        let url = self.build_url(path, &[])?;
+        let url = self.build_url(path, &[]);
         let builder = self
             .client
             .post(&url)
@@ -97,13 +94,13 @@ impl HttpClient {
     }
 
     /// Executa uma requisição PUT com corpo JSON para atualizar um recurso.
-    pub async fn put<T: DeserializeOwned, B: Serialize>(
+    pub(crate) async fn put<T: DeserializeOwned, B: Serialize + Sync>(
         &self,
         path: &str,
         body: &B,
         operation: &str,
     ) -> Result<T, RedmineError> {
-        let url = self.build_url(path, &[])?;
+        let url = self.build_url(path, &[]);
         let json_body = serde_json::to_string(body)?;
         let builder = self
             .client
@@ -114,13 +111,13 @@ impl HttpClient {
     }
 
     /// Executa uma requisição PUT com corpo JSON, sem desserializar a resposta (204 No Content).
-    pub async fn put_void<B: Serialize>(
+    pub(crate) async fn put_void<B: Serialize + Sync>(
         &self,
         path: &str,
         body: &B,
         operation: &str,
     ) -> Result<(), RedmineError> {
-        let url = self.build_url(path, &[])?;
+        let url = self.build_url(path, &[]);
         let json_body = serde_json::to_string(body)?;
         let builder = self
             .client
@@ -131,7 +128,7 @@ impl HttpClient {
     }
 
     /// Executa uma GET e extrai um campo específico do JSON de resposta.
-    pub async fn get_single<T: DeserializeOwned>(
+    pub(crate) async fn get_single<T: DeserializeOwned>(
         &self,
         path: &str,
         key: &str,
@@ -154,7 +151,7 @@ impl HttpClient {
     }
 
     /// Executa uma POST e extrai um campo específico do JSON de resposta.
-    pub async fn post_single<T: DeserializeOwned, B: Serialize>(
+    pub(crate) async fn post_single<T: DeserializeOwned, B: Serialize + Sync>(
         &self,
         path: &str,
         key: &str,
@@ -178,7 +175,7 @@ impl HttpClient {
 
     /// Executa uma GET com suporte a paginação e retorna os itens da página
     /// juntamente com o total de registros disponíveis.
-    pub async fn get_paginated<T: DeserializeOwned>(
+    pub(crate) async fn get_paginated<T: DeserializeOwned>(
         &self,
         path: &str,
         item_key: &str,
@@ -197,8 +194,8 @@ impl HttpClient {
         let v: serde_json::Value = self.get(path, &q, op).await?;
         let total = v
             .get("total_count")
-            .and_then(|v| v.as_u64())
-            .unwrap_or(0) as u32;
+            .and_then(serde_json::Value::as_u64)
+            .map_or(0, |n| u32::try_from(n).unwrap_or(u32::MAX));
         let items = v
             .get(item_key)
             .and_then(|v| serde_json::from_value(v.clone()).ok())
@@ -208,7 +205,7 @@ impl HttpClient {
 
     /// Executa requisições GET paginadas automaticamente até obter todos os
     /// registros.
-    pub async fn get_all_paginated<T: DeserializeOwned>(
+    pub(crate) async fn get_all_paginated<T: DeserializeOwned>(
         &self,
         path: &str,
         item_key: &str,
@@ -225,14 +222,13 @@ impl HttpClient {
             let v: serde_json::Value = self.get(path, &pq, op).await?;
             let total = v
                 .get("total_count")
-                .and_then(|v| v.as_u64())
-                .unwrap_or(0) as u32;
+                .and_then(serde_json::Value::as_u64)
+                .map_or(0, |n| u32::try_from(n).unwrap_or(u32::MAX));
             let items: Vec<T> = match v.get(item_key) {
-                Some(arr) => serde_json::from_value(arr.clone())
-                    .map_err(RedmineError::from)?,
+                Some(arr) => serde_json::from_value(arr.clone()).map_err(RedmineError::from)?,
                 None => Vec::new(),
             };
-            let c = items.len() as u32;
+            let c = u32::try_from(items.len()).unwrap_or(u32::MAX);
             all.extend(items);
             if offset + c >= total {
                 break;
@@ -243,13 +239,13 @@ impl HttpClient {
     }
 
     /// Executa uma requisição PATCH com corpo JSON para atualização parcial.
-    pub async fn patch<T: DeserializeOwned, B: Serialize>(
+    pub(crate) async fn patch<T: DeserializeOwned, B: Serialize + Sync>(
         &self,
         path: &str,
         body: &B,
         operation: &str,
     ) -> Result<T, RedmineError> {
-        let url = self.build_url(path, &[])?;
+        let url = self.build_url(path, &[]);
         let json_body = serde_json::to_string(body)?;
         let builder = self
             .client
@@ -260,17 +256,14 @@ impl HttpClient {
     }
 
     /// Executa uma requisição DELETE para remover um recurso.
-    pub async fn delete(
+    pub(crate) async fn delete(
         &self,
         path: &str,
         query: &[(&str, String)],
         operation: &str,
     ) -> Result<(), RedmineError> {
-        let url = self.build_url(path, query)?;
-        let builder = self
-            .client
-            .delete(&url)
-            .headers(self.auth_headers());
+        let url = self.build_url(path, query);
+        let builder = self.client.delete(&url).headers(self.auth_headers());
         self.execute_void(builder, operation).await
     }
 
@@ -285,13 +278,14 @@ impl HttpClient {
         if let Some(ref switch_user) = self.config.switch_user {
             headers.insert(
                 "X-Redmine-Switch-User",
-                HeaderValue::from_str(switch_user).expect("switch_user deve conter caracteres ASCII válidos"),
+                HeaderValue::from_str(switch_user)
+                    .expect("switch_user deve conter caracteres ASCII válidos"),
             );
         }
         headers
     }
 
-    fn build_url(&self, path: &str, query: &[(&str, String)]) -> Result<String, RedmineError> {
+    fn build_url(&self, path: &str, query: &[(&str, String)]) -> String {
         let mut url = self.config.api_url(path);
         if !query.is_empty() {
             url.push('?');
@@ -301,7 +295,7 @@ impl HttpClient {
             }
             serializer.finish();
         }
-        Ok(url)
+        url
     }
 
     async fn acquire_rate_limit(&self) {
@@ -404,7 +398,12 @@ impl HttpClient {
                 response_body: Some(body),
                 ..Default::default()
             };
-            RedmineError::api(ErrorCategory::ParseError, status.as_u16(), e.to_string(), ctx)
+            RedmineError::api(
+                ErrorCategory::ParseError,
+                status.as_u16(),
+                e.to_string(),
+                ctx,
+            )
         })
     }
 
@@ -438,7 +437,7 @@ impl HttpClient {
         if category == ErrorCategory::RateLimited {
             let retry_after = serde_json::from_str::<serde_json::Value>(body)
                 .ok()
-                .and_then(|v| v.get("retry_after").and_then(|v| v.as_u64()));
+                .and_then(|v| v.get("retry_after").and_then(serde_json::Value::as_u64));
             return RedmineError::RateLimited {
                 retry_after,
                 context: Box::new(context),

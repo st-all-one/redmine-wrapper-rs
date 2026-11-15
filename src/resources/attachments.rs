@@ -33,8 +33,10 @@ impl AttachmentsResource {
     /// let attachment = client.attachments.get(5).await?;
     /// ```
     pub async fn get(&self, id: RedmineId) -> Result<Attachment, RedmineError> {
-        let path = format!("/attachments/{}.json", id);
-        self.http.get_single(&path, "attachment", &[], "attachments.get").await
+        let path = format!("/attachments/{id}.json");
+        self.http
+            .get_single(&path, "attachment", &[], "attachments.get")
+            .await
     }
 
     /// Exclui um anexo.
@@ -47,7 +49,7 @@ impl AttachmentsResource {
     /// client.attachments.delete(5).await?;
     /// ```
     pub async fn delete(&self, id: RedmineId) -> Result<(), RedmineError> {
-        let path = format!("/attachments/{}.json", id);
+        let path = format!("/attachments/{id}.json");
         self.http.delete(&path, &[], "attachments.delete").await
     }
 
@@ -67,8 +69,16 @@ impl AttachmentsResource {
     /// let token = client.attachments.upload("foto.png", &bytes).await?;
     /// ```
     pub async fn upload(&self, filename: &str, data: &[u8]) -> Result<String, RedmineError> {
-        let path = format!("/uploads.json?filename={}", filename);
-        let result: UploadTokenResponse = self.http.post_binary(&path, data, "application/octet-stream", "attachments.upload").await?;
+        let path = format!("/uploads.json?filename={filename}");
+        let result: UploadTokenResponse = self
+            .http
+            .post_binary(
+                &path,
+                data,
+                "application/octet-stream",
+                "attachments.upload",
+            )
+            .await?;
         Ok(result.upload.token)
     }
 
@@ -85,8 +95,12 @@ impl AttachmentsResource {
     /// let payload = UpdateAttachmentPayload { description: Some("Nova descrição".into()), ..Default::default() };
     /// client.attachments.update(5, &payload).await?;
     /// ```
-    pub async fn update(&self, id: RedmineId, payload: &UpdateAttachmentPayload) -> Result<Attachment, RedmineError> {
-        let path = format!("/attachments/{}.json", id);
+    pub async fn update(
+        &self,
+        id: RedmineId,
+        payload: &UpdateAttachmentPayload,
+    ) -> Result<Attachment, RedmineError> {
+        let path = format!("/attachments/{id}.json");
         let body = serde_json::json!({ "attachment": payload });
         self.http.patch(&path, &body, "attachments.update").await
     }

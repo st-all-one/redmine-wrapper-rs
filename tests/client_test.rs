@@ -5,9 +5,9 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+use redmine_wrapper::RedmineClient;
 use redmine_wrapper::core::config::RedmineConfig;
 use redmine_wrapper::core::errors::ErrorCategory;
-use redmine_wrapper::RedmineClient;
 use wiremock::matchers::{header, method, path};
 use wiremock::{Mock, MockServer, ResponseTemplate};
 
@@ -82,11 +82,9 @@ async fn test_issues_list() {
 
     Mock::given(method("GET"))
         .and(path("/issues.json"))
-        .respond_with(
-            ResponseTemplate::new(200).set_body_string(
-                r#"{"issues":[{"id":1,"subject":"Test Issue"}],"total_count":1,"limit":25,"offset":0}"#,
-            ),
-        )
+        .respond_with(ResponseTemplate::new(200).set_body_string(
+            r#"{"issues":[{"id":1,"subject":"Test Issue"}],"total_count":1,"limit":25,"offset":0}"#,
+        ))
         .mount(&server)
         .await;
 
@@ -101,11 +99,9 @@ async fn test_issues_get() {
 
     Mock::given(method("GET"))
         .and(path("/issues/1.json"))
-        .respond_with(
-            ResponseTemplate::new(200).set_body_string(
-                r#"{"issue":{"id":1,"subject":"Test","project":{"id":1,"name":"P1"}}}"#,
-            ),
-        )
+        .respond_with(ResponseTemplate::new(200).set_body_string(
+            r#"{"issue":{"id":1,"subject":"Test","project":{"id":1,"name":"P1"}}}"#,
+        ))
         .mount(&server)
         .await;
 
@@ -211,5 +207,8 @@ async fn test_auth_method_default() {
         ..Default::default()
     };
     let client = RedmineClient::new(config).unwrap();
-    assert_eq!(client.config.auth_method, redmine_wrapper::AuthMethod::Header);
+    assert_eq!(
+        client.config.auth_method,
+        redmine_wrapper::AuthMethod::Header
+    );
 }

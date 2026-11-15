@@ -7,7 +7,7 @@ use std::sync::Arc;
 use crate::core::errors::RedmineError;
 use crate::http::client::HttpClient;
 use crate::types::base::RedmineId;
-use crate::types::wiki::*;
+use crate::types::wiki::{CreateWikiPagePayload, WikiPage, WikiPageSummary};
 
 /// Recurso para operações com páginas wiki do Redmine.
 #[derive(Debug)]
@@ -31,8 +31,11 @@ impl WikiResource {
     /// let pages = client.wiki.list(1).await?;
     /// ```
     pub async fn list(&self, project_id: RedmineId) -> Result<Vec<WikiPageSummary>, RedmineError> {
-        let path = format!("/projects/{}/wiki/index.json", project_id);
-        let (items, _total) = self.http.get_paginated(&path, "wiki_pages", None, &[], "wiki.list").await?;
+        let path = format!("/projects/{project_id}/wiki/index.json");
+        let (items, _total) = self
+            .http
+            .get_paginated(&path, "wiki_pages", None, &[], "wiki.list")
+            .await?;
         Ok(items)
     }
 
@@ -47,13 +50,20 @@ impl WikiResource {
     /// ```rust,ignore
     /// let page = client.wiki.get(1, "PáginaInicial", Some(&["attachments"])).await?;
     /// ```
-    pub async fn get(&self, project_id: RedmineId, title: &str, includes: Option<&[&str]>) -> Result<WikiPage, RedmineError> {
-        let path = format!("/projects/{}/wiki/{}.json", project_id, title);
+    pub async fn get(
+        &self,
+        project_id: RedmineId,
+        title: &str,
+        includes: Option<&[&str]>,
+    ) -> Result<WikiPage, RedmineError> {
+        let path = format!("/projects/{project_id}/wiki/{title}.json");
         let mut query = Vec::new();
         if let Some(inc) = includes {
             query.push(("include", inc.join(",")));
         }
-        self.http.get_single(&path, "wiki_page", &query, "wiki.get").await
+        self.http
+            .get_single(&path, "wiki_page", &query, "wiki.get")
+            .await
     }
 
     /// Retorna uma versão específica de uma página wiki.
@@ -67,9 +77,16 @@ impl WikiResource {
     /// ```rust,ignore
     /// let page = client.wiki.get_version(1, "PáginaInicial", 3).await?;
     /// ```
-    pub async fn get_version(&self, project_id: RedmineId, title: &str, version: u32) -> Result<WikiPage, RedmineError> {
-        let path = format!("/projects/{}/wiki/{}/{}.json", project_id, title, version);
-        self.http.get_single(&path, "wiki_page", &[], "wiki.get_version").await
+    pub async fn get_version(
+        &self,
+        project_id: RedmineId,
+        title: &str,
+        version: u32,
+    ) -> Result<WikiPage, RedmineError> {
+        let path = format!("/projects/{project_id}/wiki/{title}/{version}.json");
+        self.http
+            .get_single(&path, "wiki_page", &[], "wiki.get_version")
+            .await
     }
 
     /// Cria ou atualiza uma página wiki.
@@ -86,10 +103,17 @@ impl WikiResource {
     /// let payload = CreateWikiPagePayload { text: "Novo conteúdo".into(), ..Default::default() };
     /// client.wiki.create_or_update(1, "PáginaInicial", &payload).await?;
     /// ```
-    pub async fn create_or_update(&self, project_id: RedmineId, title: &str, payload: &CreateWikiPagePayload) -> Result<(), RedmineError> {
-        let path = format!("/projects/{}/wiki/{}.json", project_id, title);
+    pub async fn create_or_update(
+        &self,
+        project_id: RedmineId,
+        title: &str,
+        payload: &CreateWikiPagePayload,
+    ) -> Result<(), RedmineError> {
+        let path = format!("/projects/{project_id}/wiki/{title}.json");
         let body = serde_json::json!({ "wiki_page": payload });
-        self.http.put::<serde_json::Value, _>(&path, &body, "wiki.create_or_update").await?;
+        self.http
+            .put::<serde_json::Value, _>(&path, &body, "wiki.create_or_update")
+            .await?;
         Ok(())
     }
 
@@ -104,7 +128,7 @@ impl WikiResource {
     /// client.wiki.delete(1, "PáginaAntiga").await?;
     /// ```
     pub async fn delete(&self, project_id: RedmineId, title: &str) -> Result<(), RedmineError> {
-        let path = format!("/projects/{}/wiki/{}.json", project_id, title);
+        let path = format!("/projects/{project_id}/wiki/{title}.json");
         self.http.delete(&path, &[], "wiki.delete").await
     }
 }

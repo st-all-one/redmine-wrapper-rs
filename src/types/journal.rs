@@ -2,13 +2,13 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+use crate::types::base::{IdName, RedmineId};
 use serde::{Deserialize, Serialize};
-use crate::types::base::{RedmineId, IdName};
 
 /// Detalhe de alteração em um campo da issue dentro de um journal.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct JournalDetail {
-    /// Nome da propriedade alterada (ex: "status_id", "subject").
+    /// Nome da propriedade alterada (ex: "`status_id`", "subject").
     pub property: Option<String>,
     /// Nome legível do campo alterado.
     pub name: Option<String>,

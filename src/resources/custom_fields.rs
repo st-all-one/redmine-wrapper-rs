@@ -27,7 +27,16 @@ impl CustomFieldsResource {
     /// let fields = client.custom_fields.list().await?;
     /// ```
     pub async fn list(&self) -> Result<Vec<CustomField>, RedmineError> {
-        let (items, _total) = self.http.get_paginated("/custom_fields.json", "custom_fields", None, &[], "custom_fields.list").await?;
+        let (items, _total) = self
+            .http
+            .get_paginated(
+                "/custom_fields.json",
+                "custom_fields",
+                None,
+                &[],
+                "custom_fields.list",
+            )
+            .await?;
         Ok(items)
     }
 }

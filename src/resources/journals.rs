@@ -7,7 +7,7 @@ use std::sync::Arc;
 use crate::core::errors::RedmineError;
 use crate::http::client::HttpClient;
 use crate::types::base::RedmineId;
-use crate::types::journal::*;
+use crate::types::journal::UpdateJournalPayload;
 
 /// Recurso para operações com journals (histórico de issues).
 #[derive(Debug)]
@@ -32,10 +32,16 @@ impl JournalsResource {
     /// let payload = UpdateJournalPayload { notes: "Nova anotação".into() };
     /// client.journals.update(1, &payload).await?;
     /// ```
-    pub async fn update(&self, id: RedmineId, payload: &UpdateJournalPayload) -> Result<(), RedmineError> {
-        let path = format!("/journals/{}.json", id);
+    pub async fn update(
+        &self,
+        id: RedmineId,
+        payload: &UpdateJournalPayload,
+    ) -> Result<(), RedmineError> {
+        let path = format!("/journals/{id}.json");
         let body = serde_json::json!({ "journal": payload });
-        self.http.put::<serde_json::Value, _>(&path, &body, "journals.update").await?;
+        self.http
+            .put::<serde_json::Value, _>(&path, &body, "journals.update")
+            .await?;
         Ok(())
     }
 
@@ -49,9 +55,11 @@ impl JournalsResource {
     /// client.journals.remove(1).await?;
     /// ```
     pub async fn remove(&self, id: RedmineId) -> Result<(), RedmineError> {
-        let path = format!("/journals/{}.json", id);
+        let path = format!("/journals/{id}.json");
         let body = serde_json::json!({ "journal": { "notes": "" } });
-        self.http.put::<serde_json::Value, _>(&path, &body, "journals.remove").await?;
+        self.http
+            .put::<serde_json::Value, _>(&path, &body, "journals.remove")
+            .await?;
         Ok(())
     }
 }

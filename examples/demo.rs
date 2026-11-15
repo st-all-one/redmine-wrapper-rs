@@ -27,7 +27,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
     let client = RedmineClient::new(cfg_builder.build()?)?;
 
-    println!("Cliente Redmine configurado para: {}", client.config.base_url);
+    println!(
+        "Cliente Redmine configurado para: {}",
+        client.config.base_url
+    );
 
     // Lista projetos
     match client.projects.list().await {
@@ -65,9 +68,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Conta do usuário autenticado
     match client.my_account.get().await {
         Ok(account) => {
-            println!("Usuário autenticado: #{} {} {}", account.id,
+            println!(
+                "Usuário autenticado: #{} {} {}",
+                account.id,
                 account.firstname.as_deref().unwrap_or(""),
-                account.lastname.as_deref().unwrap_or(""));
+                account.lastname.as_deref().unwrap_or("")
+            );
         }
         Err(e) => eprintln!("Erro ao obter conta: {e}"),
     }
@@ -84,7 +90,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         Ok(issues) => {
             println!("Issues abertas atribuídas a mim: {}", issues.len());
             for i in &issues {
-                println!("  - #{}: {}", i.id, i.subject.as_deref().unwrap_or("sem assunto"));
+                println!(
+                    "  - #{}: {}",
+                    i.id,
+                    i.subject.as_deref().unwrap_or("sem assunto")
+                );
             }
         }
         Err(e) => eprintln!("Erro ao listar issues: {e}"),
@@ -95,9 +105,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         Ok(priorities) => {
             println!("Prioridades: {}", priorities.len());
             for p in &priorities {
-                println!("  - #{}: {} (padrão: {})", p.id,
+                println!(
+                    "  - #{}: {} (padrão: {})",
+                    p.id,
                     p.name.as_deref().unwrap_or(""),
-                    p.is_default.unwrap_or(false));
+                    p.is_default.unwrap_or(false)
+                );
             }
         }
         Err(e) => eprintln!("Erro ao listar prioridades: {e}"),
