@@ -8,6 +8,54 @@ use crate::core::config::RedmineConfig;
 use crate::core::errors::RedmineError;
 use crate::http::client::HttpClient;
 use crate::resources;
+use serde_json::Value;
+
+/// Método HTTP aceito por [`RedmineClient::request_json`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[non_exhaustive]
+pub enum HttpMethod {
+    /// `GET`.
+    Get,
+    /// `POST`.
+    Post,
+    /// `PUT`.
+    Put,
+    /// `PATCH`.
+    Patch,
+    /// `DELETE`.
+    Delete,
+}
+
+impl HttpMethod {
+    /// Representação em maiúsculas usada em logs e na saída `--dry-run`.
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Get => "GET",
+            Self::Post => "POST",
+            Self::Put => "PUT",
+            Self::Patch => "PATCH",
+            Self::Delete => "DELETE",
+        }
+    }
+
+    /// Converte um método textual (case-insensitive).
+    ///
+    /// # Errors
+    /// Retorna [`RedmineError::Config`] para um método desconhecido.
+    pub fn parse(raw: &str) -> Result<Self, RedmineError> {
+        match raw.to_ascii_uppercase().as_str() {
+            "GET" => Ok(Self::Get),
+            "POST" => Ok(Self::Post),
+            "PUT" => Ok(Self::Put),
+            "PATCH" => Ok(Self::Patch),
+            "DELETE" => Ok(Self::Delete),
+            other => Err(RedmineError::Config(format!(
+                "método HTTP desconhecido: {other} (use GET, POST, PUT, PATCH ou DELETE)"
+            ))),
+        }
+    }
+}
 
 /// Cliente principal para a API REST do Redmine.
 ///
@@ -29,6 +77,7 @@ use crate::resources;
 /// let issues = client.issues.list(None).await?;
 /// ```
 pub struct RedmineClient {
+    http: Arc<HttpClient>,
     /// Configuração resolvida do cliente.
     pub config: RedmineConfig,
     /// Recurso para operações com issues.
@@ -102,6 +151,7 @@ impl RedmineClient {
         }
         let http = Arc::new(HttpClient::new(config.clone())?);
         Ok(Self {
+            http: Arc::clone(&http),
             config,
             issues: resources::IssuesResource::new(Arc::clone(&http)),
             projects: resources::ProjectsResource::new(Arc::clone(&http)),
@@ -131,6 +181,81 @@ impl RedmineClient {
     /// Retorna uma referência à configuração resolvida do cliente.
     pub fn config(&self) -> &RedmineConfig {
         &self.config
+    }
+
+    /// Executa uma requisição JSON arbitrária contra a API.
+    ///
+    /// É a via de escape para endpoints ou parâmetros que não têm método
+    /// tipado. O corpo é enviado como JSON em `POST`/`PUT`/`PATCH`; em
+    /// `GET`/`DELETE` os pares de `query` viram query string. Respostas
+    /// `204 No Content` e corpos vazios devolvem [`Value::Null`].
+    ///
+    /// # Exemplo
+    ///
+    /// ```rust,ignore
+    /// let issues = client
+    ///     .request_json(
+    ///         HttpMethod::Get,
+    ///         "/issues.json",
+    ///         &[("status_id", "open".to_string())],
+    ///         None,
+    ///     )
+    ///     .await?;
+    /// ```
+    ///
+    /// # Errors
+    /// Propaga erros de transporte, HTTP e parsing do corpo.
+    pub async fn request_json(
+        &self,
+        method: HttpMethod,
+        path: &str,
+        query: &[(&str, String)],
+        body: Option<&Value>,
+    ) -> Result<Value, RedmineError> {
+        const OP: &str = "client.request_json";
+        let empty = Value::Object(serde_json::Map::new());
+        let payload = body.unwrap_or(&empty);
+
+        match method {
+            HttpMethod::Get => self.http.get::<Value>(path, query, OP).await,
+            HttpMethod::Delete => {
+                self.http.delete(path, query, OP).await?;
+                Ok(Value::Null)
+            }
+            HttpMethod::Post => Ok(self
+                .http
+                .post_optional(path, payload, OP)
+                .await?
+                .unwrap_or(Value::Null)),
+            HttpMethod::Put => Ok(self
+                .http
+                .put_optional(path, payload, OP)
+                .await?
+                .unwrap_or(Value::Null)),
+            HttpMethod::Patch => Ok(self
+                .http
+                .patch_optional(path, payload, OP)
+                .await?
+                .unwrap_or(Value::Null)),
+        }
+    }
+
+    /// Executa um `GET` paginado e devolve todos os itens como JSON bruto.
+    ///
+    /// `item_key` é a chave do array na resposta (ex.: `"issues"`). A
+    /// paginação é automática (100 itens por página por padrão).
+    ///
+    /// # Errors
+    /// Propaga erros de transporte, HTTP e parsing do corpo.
+    pub async fn get_all_json(
+        &self,
+        path: &str,
+        item_key: &str,
+        query: &[(&str, String)],
+    ) -> Result<Vec<Value>, RedmineError> {
+        self.http
+            .get_all_paginated::<Value>(path, item_key, query, "client.get_all_json")
+            .await
     }
 }
 

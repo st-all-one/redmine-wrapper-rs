@@ -40,7 +40,7 @@ impl JournalsResource {
         let path = format!("/journals/{id}.json");
         let body = serde_json::json!({ "journal": payload });
         self.http
-            .put::<serde_json::Value, _>(&path, &body, "journals.update")
+            .put_optional(&path, &body, "journals.update")
             .await?;
         Ok(())
     }
@@ -58,7 +58,7 @@ impl JournalsResource {
         let path = format!("/journals/{id}.json");
         let body = serde_json::json!({ "journal": { "notes": "" } });
         self.http
-            .put::<serde_json::Value, _>(&path, &body, "journals.remove")
+            .put_optional(&path, &body, "journals.remove")
             .await?;
         Ok(())
     }

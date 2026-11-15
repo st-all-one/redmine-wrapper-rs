@@ -215,7 +215,7 @@ impl IssuesResource {
         let path = format!("/issues/{issue_id}/watchers.json");
         let body = serde_json::json!({ "user_id": user_id });
         self.http
-            .post::<serde_json::Value, _>(&path, &body, "issues.add_watcher")
+            .post_optional(&path, &body, "issues.add_watcher")
             .await?;
         Ok(())
     }

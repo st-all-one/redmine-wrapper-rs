@@ -100,7 +100,7 @@ impl VersionsResource {
         let path = format!("/versions/{id}.json");
         let body = serde_json::json!({ "version": payload });
         self.http
-            .put::<serde_json::Value, _>(&path, &body, "versions.update")
+            .put_optional(&path, &body, "versions.update")
             .await?;
         Ok(())
     }

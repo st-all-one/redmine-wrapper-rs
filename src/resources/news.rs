@@ -130,9 +130,7 @@ impl NewsResource {
     ) -> Result<(), RedmineError> {
         let path = format!("/news/{id}.json");
         let body = serde_json::json!({ "news": payload });
-        self.http
-            .put::<serde_json::Value, _>(&path, &body, "news.update")
-            .await?;
+        self.http.put_optional(&path, &body, "news.update").await?;
         Ok(())
     }
 

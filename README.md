@@ -17,6 +17,7 @@
 ## 📖 Documentação
 
 - [Guia de Uso](./wiki/usage-guide.md) — Exemplos completos para todos os 22 recursos
+- [CLI `redmine`](./wiki/cli.md) — Entrypoint de shell, `--params`, stdin, lotes e `api`
 - [Getting Started](./wiki/getting-started.md) — Instalação, configuração, primeira chamada
 - [Guia de Integração](./wiki/integration-guide.md) — DI, retry, cache, axum, impersonação
 - [Particularidades da API](./wiki/particularities.md) — Envelopes JSON, include pattern, upload 2-passos
@@ -83,6 +84,36 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 ```
+
+### CLI pronta para o shell
+
+O crate `crates/redmine-cli` compila o binário `redmine`, um entrypoint rápido
+para consultas e ações. O contrato completo está em [`wiki/cli.md`](./wiki/cli.md).
+
+```bash
+cargo build --release -p redmine-cli
+export REDMINE_URL=https://redmine.example.com
+export REDMINE_TOKEN=seu-api-token
+
+# consultas
+redmine issues list --params '{"status_id":"open","assigned_to_id":"me"}'
+redmine issues get --id 42 --json
+redmine search "falha no login"
+
+# escrita com heredoc ou stdin
+redmine issues create <<'JSON'
+{"project_id":1,"subject":"Bug","description":"Passos..."}
+JSON
+
+# lote JSONL e via de escape
+redmine issues get --batch ids.jsonl
+redmine api --method GET --path /custom_fields.json
+```
+
+O posicional é apenas conteúdo (`search <CONSULTA>`); metadados são flags
+(`--id`, `--project`, `--title`, `--user`). `--params` carrega filtros ou corpo,
+`--batch` executa lotes best-effort em NDJSON e `--json` emite um envelope
+estável de máquina.
 
 ### Tratamento de erros (RFC 7807):
 

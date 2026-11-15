@@ -108,7 +108,7 @@ impl IssueCategoriesResource {
         let path = format!("/issue_categories/{id}.json");
         let body = serde_json::json!({ "issue_category": payload });
         self.http
-            .put::<serde_json::Value, _>(&path, &body, "issue_categories.update")
+            .put_optional(&path, &body, "issue_categories.update")
             .await?;
         Ok(())
     }

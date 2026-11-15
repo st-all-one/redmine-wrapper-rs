@@ -106,7 +106,7 @@ impl MembershipsResource {
         let path = format!("/memberships/{id}.json");
         let body = serde_json::json!({ "membership": payload });
         self.http
-            .put::<serde_json::Value, _>(&path, &body, "memberships.update")
+            .put_optional(&path, &body, "memberships.update")
             .await?;
         Ok(())
     }

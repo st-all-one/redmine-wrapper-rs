@@ -43,6 +43,7 @@ pub mod types;
 /// Modulo utils: utilitarios (filtros, query helpers).
 pub mod utils;
 
+pub use client::HttpMethod;
 pub use client::RedmineClient;
 pub use core::config::{AuthMethod, RedmineConfig, RedmineConfigBuilder};
 pub use core::errors::{ErrorCategory, ErrorContext, RedmineError};

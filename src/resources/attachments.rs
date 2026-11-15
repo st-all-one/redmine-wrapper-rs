@@ -69,7 +69,11 @@ impl AttachmentsResource {
     /// let token = client.attachments.upload("foto.png", &bytes).await?;
     /// ```
     pub async fn upload(&self, filename: &str, data: &[u8]) -> Result<String, RedmineError> {
-        let path = format!("/uploads.json?filename={filename}");
+        let mut url = reqwest::Url::parse("https://redmine.invalid/uploads.json")
+            .expect("URL estática de upload deve ser válida");
+        url.query_pairs_mut().append_pair("filename", filename);
+        let query = url.query().unwrap_or_default();
+        let path = format!("/uploads.json?{query}");
         let result: UploadTokenResponse = self
             .http
             .post_binary(

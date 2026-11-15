@@ -8,6 +8,7 @@ cobertura completa de todos os 86 endpoints da API.
 
 - [Primeiros Passos](getting-started)
 - [Guia de Uso](usage)
+- [CLI `redmine`](cli)
 - [Guia de Integração](integration)
 - [Particularidades da API](api-particularities)
 - [Referência da API](api-reference)

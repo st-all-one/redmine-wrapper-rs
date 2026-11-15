@@ -6,6 +6,7 @@ use reqwest::header::{CONTENT_TYPE, HeaderMap, HeaderValue};
 use reqwest::{Client, RequestBuilder, Response};
 use serde::Serialize;
 use serde::de::DeserializeOwned;
+use serde_json::Value;
 use tokio::sync::Mutex;
 use tracing::instrument;
 use url::form_urlencoded::Serializer as UrlSerializer;
@@ -93,23 +94,6 @@ impl HttpClient {
         self.execute(builder, operation).await
     }
 
-    /// Executa uma requisição PUT com corpo JSON para atualizar um recurso.
-    pub(crate) async fn put<T: DeserializeOwned, B: Serialize + Sync>(
-        &self,
-        path: &str,
-        body: &B,
-        operation: &str,
-    ) -> Result<T, RedmineError> {
-        let url = self.build_url(path, &[]);
-        let json_body = serde_json::to_string(body)?;
-        let builder = self
-            .client
-            .put(&url)
-            .headers(self.auth_headers())
-            .body(json_body);
-        self.execute(builder, operation).await
-    }
-
     /// Executa uma requisição PUT com corpo JSON, sem desserializar a resposta (204 No Content).
     pub(crate) async fn put_void<B: Serialize + Sync>(
         &self,
@@ -135,7 +119,7 @@ impl HttpClient {
         query: &[(&str, String)],
         op: &str,
     ) -> Result<T, RedmineError> {
-        let v: serde_json::Value = self.get(path, query, op).await?;
+        let v: Value = self.get(path, query, op).await?;
         let inner = v.get(key).ok_or_else(|| {
             RedmineError::api(
                 ErrorCategory::ParseError,
@@ -158,7 +142,7 @@ impl HttpClient {
         body: &B,
         op: &str,
     ) -> Result<T, RedmineError> {
-        let v: serde_json::Value = self.post(path, body, op).await?;
+        let v: Value = self.post(path, body, op).await?;
         let inner = v.get(key).ok_or_else(|| {
             RedmineError::api(
                 ErrorCategory::ParseError,
@@ -191,10 +175,10 @@ impl HttpClient {
         } else {
             q.push(("limit", DEFAULT_PAGINATION_LIMIT.to_string()));
         }
-        let v: serde_json::Value = self.get(path, &q, op).await?;
+        let v: Value = self.get(path, &q, op).await?;
         let total = v
             .get("total_count")
-            .and_then(serde_json::Value::as_u64)
+            .and_then(Value::as_u64)
             .map_or(0, |n| u32::try_from(n).unwrap_or(u32::MAX));
         let items = v
             .get(item_key)
@@ -219,10 +203,10 @@ impl HttpClient {
             let mut pq = query.to_vec();
             pq.push(("offset", offset.to_string()));
             pq.push(("limit", limit.to_string()));
-            let v: serde_json::Value = self.get(path, &pq, op).await?;
+            let v: Value = self.get(path, &pq, op).await?;
             let total = v
                 .get("total_count")
-                .and_then(serde_json::Value::as_u64)
+                .and_then(Value::as_u64)
                 .map_or(0, |n| u32::try_from(n).unwrap_or(u32::MAX));
             let items: Vec<T> = match v.get(item_key) {
                 Some(arr) => serde_json::from_value(arr.clone()).map_err(RedmineError::from)?,
@@ -253,6 +237,57 @@ impl HttpClient {
             .headers(self.auth_headers())
             .body(json_body);
         self.execute(builder, operation).await
+    }
+
+    /// Executa um POST com corpo JSON e devolve o JSON da resposta (ou `None` em 204).
+    pub(crate) async fn post_optional<B: Serialize + Sync>(
+        &self,
+        path: &str,
+        body: &B,
+        operation: &str,
+    ) -> Result<Option<Value>, RedmineError> {
+        let url = self.build_url(path, &[]);
+        let json_body = serde_json::to_string(body)?;
+        let builder = self
+            .client
+            .post(&url)
+            .headers(self.auth_headers())
+            .body(json_body);
+        self.execute_optional(builder, operation).await
+    }
+
+    /// Executa um PUT com corpo JSON e devolve o JSON da resposta (ou `None` em 204).
+    pub(crate) async fn put_optional<B: Serialize + Sync>(
+        &self,
+        path: &str,
+        body: &B,
+        operation: &str,
+    ) -> Result<Option<Value>, RedmineError> {
+        let url = self.build_url(path, &[]);
+        let json_body = serde_json::to_string(body)?;
+        let builder = self
+            .client
+            .put(&url)
+            .headers(self.auth_headers())
+            .body(json_body);
+        self.execute_optional(builder, operation).await
+    }
+
+    /// Executa um PATCH com corpo JSON e devolve o JSON da resposta (ou `None` em 204).
+    pub(crate) async fn patch_optional<B: Serialize + Sync>(
+        &self,
+        path: &str,
+        body: &B,
+        operation: &str,
+    ) -> Result<Option<Value>, RedmineError> {
+        let url = self.build_url(path, &[]);
+        let json_body = serde_json::to_string(body)?;
+        let builder = self
+            .client
+            .patch(&url)
+            .headers(self.auth_headers())
+            .body(json_body);
+        self.execute_optional(builder, operation).await
     }
 
     /// Executa uma requisição DELETE para remover um recurso.
@@ -303,16 +338,14 @@ impl HttpClient {
         limiter.acquire().await;
     }
 
-    /// Executa uma requisição, aplica rate limiting e parseia a resposta JSON.
-    #[instrument(skip(self, builder), fields(operation = %operation))]
-    async fn execute<T: DeserializeOwned>(
+    /// Envia a requisição com rate limiting, mapeando falhas de transporte.
+    async fn send(
         &self,
         builder: RequestBuilder,
         operation: &str,
-    ) -> Result<T, RedmineError> {
+    ) -> Result<Response, RedmineError> {
         self.acquire_rate_limit().await;
-
-        let response = builder.send().await.map_err(|e| {
+        builder.send().await.map_err(|e| {
             if e.is_timeout() {
                 RedmineError::Timeout {
                     duration: self.config.timeout,
@@ -324,8 +357,17 @@ impl HttpClient {
             } else {
                 RedmineError::Http(e)
             }
-        })?;
+        })
+    }
 
+    /// Executa uma requisição, aplica rate limiting e parseia a resposta JSON.
+    #[instrument(skip(self, builder), fields(operation = %operation))]
+    async fn execute<T: DeserializeOwned>(
+        &self,
+        builder: RequestBuilder,
+        operation: &str,
+    ) -> Result<T, RedmineError> {
+        let response = self.send(builder, operation).await?;
         Self::handle_response(response, operation).await
     }
 
@@ -335,21 +377,7 @@ impl HttpClient {
         builder: RequestBuilder,
         operation: &str,
     ) -> Result<(), RedmineError> {
-        self.acquire_rate_limit().await;
-
-        let response = builder.send().await.map_err(|e| {
-            if e.is_timeout() {
-                RedmineError::Timeout {
-                    duration: self.config.timeout,
-                    context: Box::new(ErrorContext {
-                        operation: Some(operation.into()),
-                        ..Default::default()
-                    }),
-                }
-            } else {
-                RedmineError::Http(e)
-            }
-        })?;
+        let response = self.send(builder, operation).await?;
 
         let status = response.status();
         if status.is_success() {
@@ -358,6 +386,28 @@ impl HttpClient {
 
         let body = response.text().await.unwrap_or_default();
         Err(Self::map_error(status.as_u16(), &body, operation))
+    }
+
+    /// Executa uma requisição e devolve o JSON da resposta, ou `None` em 204/corpo vazio.
+    async fn execute_optional(
+        &self,
+        builder: RequestBuilder,
+        operation: &str,
+    ) -> Result<Option<Value>, RedmineError> {
+        let response = self.send(builder, operation).await?;
+        let status = response.status();
+        let body = response.text().await.unwrap_or_default();
+
+        if !status.is_success() {
+            return Err(Self::map_error(status.as_u16(), &body, operation));
+        }
+        if status == 204 || body.trim().is_empty() {
+            return Ok(None);
+        }
+
+        serde_json::from_str(&body)
+            .map(Some)
+            .map_err(|e| Self::parse_error(status.as_u16(), &body, operation, &e))
     }
 
     async fn handle_response<T: DeserializeOwned>(
@@ -385,34 +435,36 @@ impl HttpClient {
             return Err(Self::map_error(status.as_u16(), &body, operation));
         }
 
-        serde_json::from_str(&body).map_err(|e| {
-            tracing::error!(
-                target: "redmine_wrapper::http",
-                "{}: falha ao desserializar resposta: {}",
-                operation,
-                e,
-            );
-            let ctx = ErrorContext {
-                operation: Some(operation.into()),
-                http_status: Some(status.as_u16()),
-                response_body: Some(body),
-                ..Default::default()
-            };
-            RedmineError::api(
-                ErrorCategory::ParseError,
-                status.as_u16(),
-                e.to_string(),
-                ctx,
-            )
-        })
+        serde_json::from_str(&body)
+            .map_err(|e| Self::parse_error(status.as_u16(), &body, operation, &e))
+    }
+
+    fn parse_error(
+        status: u16,
+        body: &str,
+        operation: &str,
+        error: &serde_json::Error,
+    ) -> RedmineError {
+        tracing::error!(
+            target: "redmine_wrapper::http",
+            "{}: falha ao desserializar resposta: {}",
+            operation,
+            error,
+        );
+        let ctx = ErrorContext {
+            operation: Some(operation.into()),
+            http_status: Some(status),
+            response_body: Some(body.to_string()),
+            ..Default::default()
+        };
+        RedmineError::api(ErrorCategory::ParseError, status, error.to_string(), ctx)
     }
 
     fn map_error(status: u16, body: &str, operation: &str) -> RedmineError {
         let category = ErrorCategory::from_status(status).unwrap_or(ErrorCategory::InternalError);
 
-        let api_errors: Option<Vec<String>> = serde_json::from_str::<serde_json::Value>(body)
-            .ok()
-            .and_then(|v| {
+        let api_errors: Option<Vec<String>> =
+            serde_json::from_str::<Value>(body).ok().and_then(|v| {
                 v.get("errors")
                     .and_then(|e| serde_json::from_value(e.clone()).ok())
             });
@@ -435,9 +487,9 @@ impl HttpClient {
         };
 
         if category == ErrorCategory::RateLimited {
-            let retry_after = serde_json::from_str::<serde_json::Value>(body)
+            let retry_after = serde_json::from_str::<Value>(body)
                 .ok()
-                .and_then(|v| v.get("retry_after").and_then(serde_json::Value::as_u64));
+                .and_then(|v| v.get("retry_after").and_then(Value::as_u64));
             return RedmineError::RateLimited {
                 retry_after,
                 context: Box::new(context),

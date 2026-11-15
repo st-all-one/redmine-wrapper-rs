@@ -112,7 +112,7 @@ impl WikiResource {
         let path = format!("/projects/{project_id}/wiki/{title}.json");
         let body = serde_json::json!({ "wiki_page": payload });
         self.http
-            .put::<serde_json::Value, _>(&path, &body, "wiki.create_or_update")
+            .put_optional(&path, &body, "wiki.create_or_update")
             .await?;
         Ok(())
     }

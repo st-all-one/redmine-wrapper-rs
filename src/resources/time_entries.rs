@@ -110,7 +110,7 @@ impl TimeEntriesResource {
         let path = format!("/time_entries/{id}.json");
         let body = serde_json::json!({ "time_entry": payload });
         self.http
-            .put::<serde_json::Value, _>(&path, &body, "time_entries.update")
+            .put_optional(&path, &body, "time_entries.update")
             .await?;
         Ok(())
     }

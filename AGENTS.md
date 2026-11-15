@@ -6,10 +6,15 @@
 cargo build
 cargo test
 cargo fmt --check
-cargo clippy --all-targets -- -D warnings
+cargo clippy --workspace --all-targets -- -D warnings
 cargo doc --no-deps
 cargo check --example demo
 REDMINE_URL=https://redmine.example.com REDMINE_TOKEN=xxx cargo run --example demo
+
+# CLI (crate separado, bin `redmine`)
+cargo build -p redmine-cli
+cargo test -p redmine-cli
+cargo run -p redmine-cli -- --help
 ```
 
 ## Stack
@@ -92,7 +97,43 @@ redmine_wrapper (lib)
 └── utils/
     ├── mod.rs
     └── query.rs        # filter_to_query helper
+
+crates/redmine-cli/ (bin `redmine`, publish = false)
+├── Cargo.toml
+├── src/
+│   ├── main.rs         # tokio::main, clap error -> exit code
+│   ├── error.rs        # CliError: código de máquina + exit code
+│   ├── output.rs       # Payload Single/Lines, envelope, NDJSON, EPIPE
+│   ├── cli/
+│   │   ├── mod.rs      # Globals, Context, invocações, clap dinâmico
+│   │   ├── spec.rs     # ActionDef, PathSpec, ParamsMode, BodySpec, Extract
+│   │   └── groups/     # core, collab, meta, misc (tabelas declarativas)
+│   └── commands/
+│       ├── mod.rs      # build_client (token) + dispatch
+│       ├── input.rs    # stdin, --params, JSONL
+│       ├── params.rs   # query string, percent-encoding de caminho
+│       ├── engine.rs   # plano, execução, extração, lotes, uploads
+│       └── special.rs  # search e api
+└── tests/cli_test.rs   # wiremock + processo real
 ```
+
+### CLI `redmine`
+
+- Contrato: posicional = **conteúdo** (só `search <CONSULTA>`); metadados sempre
+  flags (`--id`, `--project`, `--title`, `--user`, `--file`, `--method`,
+  `--path`). Tabelas em `cli/groups/`; o motor não conhece verbo por grupo.
+- `--params '<JSON>'`: query em GET/DELETE/list, corpo em POST/PUT/PATCH;
+  `-`/stdin em escritas. `--batch` = JSONL best-effort, NDJSON na saída, exit 1
+  se alguma linha falhar. `--dry-run` imprime o plano. Listas auto-paginam;
+  `limit`/`offset` explícitos em `--params` desligam a paginação e fazem uma
+  única requisição.
+- `api` é a via de escape (`--method` + `--path`); uploads são `Special`
+  (`attachments upload`, `files upload` em 2 passos).
+- Saída: stdout=dados, stderr=erros, `--json`=envelope,
+  EPIPE=0. Exit: 0 ok, 1 lote parcial, 2 uso, 3 not found, 4 conflito,
+  5 rede/IO, 6 auth, 70 interno.
+- Documentação de uso: `wiki/cli.md`. Testes de integração em
+  `crates/redmine-cli/tests/cli_test.rs`.
 
 ## Convenções de código
 

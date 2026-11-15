@@ -114,7 +114,7 @@ impl ProjectsResource {
     ) -> Result<(), RedmineError> {
         let path = format!("/projects/{id}.json");
         self.http
-            .put::<serde_json::Value, _>(
+            .put_optional(
                 &path,
                 &UpdateProjectWrapper {
                     project: payload.clone(),
@@ -151,7 +151,7 @@ impl ProjectsResource {
     pub async fn archive(&self, id: RedmineId) -> Result<(), RedmineError> {
         let path = format!("/projects/{id}/archive.json");
         self.http
-            .put::<serde_json::Value, _>(&path, &serde_json::json!({}), "projects.archive")
+            .put_optional(&path, &serde_json::json!({}), "projects.archive")
             .await?;
         Ok(())
     }
@@ -168,7 +168,7 @@ impl ProjectsResource {
     pub async fn unarchive(&self, id: RedmineId) -> Result<(), RedmineError> {
         let path = format!("/projects/{id}/unarchive.json");
         self.http
-            .put::<serde_json::Value, _>(&path, &serde_json::json!({}), "projects.unarchive")
+            .put_optional(&path, &serde_json::json!({}), "projects.unarchive")
             .await?;
         Ok(())
     }

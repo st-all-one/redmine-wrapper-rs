@@ -139,9 +139,7 @@ impl UsersResource {
     ) -> Result<(), RedmineError> {
         let path = format!("/users/{id}.json");
         let body = serde_json::json!({ "user": payload });
-        self.http
-            .put::<serde_json::Value, _>(&path, &body, "users.update")
-            .await?;
+        self.http.put_optional(&path, &body, "users.update").await?;
         Ok(())
     }
 

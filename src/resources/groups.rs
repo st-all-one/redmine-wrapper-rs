@@ -109,7 +109,7 @@ impl GroupsResource {
         let path = format!("/groups/{id}.json");
         let body = json!({ "group": payload });
         self.http
-            .put::<serde_json::Value, _>(&path, &body, "groups.update")
+            .put_optional(&path, &body, "groups.update")
             .await?;
         Ok(())
     }
@@ -146,7 +146,7 @@ impl GroupsResource {
         let path = format!("/groups/{group_id}/users.json");
         let body = json!({ "user_id": user_id });
         self.http
-            .post::<serde_json::Value, _>(&path, &body, "groups.add_user")
+            .post_optional(&path, &body, "groups.add_user")
             .await?;
         Ok(())
     }
