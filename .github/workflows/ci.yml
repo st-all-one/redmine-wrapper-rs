@@ -1,0 +1,61 @@
+name: CI
+
+# Push em qualquer branch + PRs. O release (binários do CLI `redmine`) fica no
+# `release.yml`, disparado por tag `v*` — aqui não se compila release.
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+env:
+  CARGO_TERM_COLOR: always
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: fmt + clippy + test + docs
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.100
+          components: rustfmt, clippy
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Formatação
+        run: cargo fmt --all -- --check
+
+      - name: Clippy (workspace, todos os alvos)
+        run: cargo clippy --workspace --all-targets --locked -- -D warnings
+
+      - name: Testes (workspace, lock fixo)
+        run: cargo test --workspace --locked
+
+      - name: Documentação
+        run: cargo doc --workspace --no-deps --locked
+
+  platform:
+    name: smoke ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.100
+
+      - uses: Swatinem/rust-cache@v2
+
+      # O CLI e o wrapper são multiplataforma; o teste de integração sobe o
+      # binário real contra um servidor wiremock, então cobre processo e I/O.
+      - name: Testes de plataforma
+        run: cargo test --workspace --locked

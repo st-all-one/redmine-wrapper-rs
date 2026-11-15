@@ -373,6 +373,24 @@ test result: ok. 31 passed; 0 failed
 
 ---
 
+## 📦 Release
+
+O workflow `.github/workflows/release.yml` dispara em tags `vX.Y.Z`:
+
+```bash
+git tag v0.2.0
+git push origin v0.2.0
+```
+
+Antes de taguear, as versões em `Cargo.toml` e `crates/redmine-cli/Cargo.toml`
+devem ser iguais à tag (sem o `v`); o pipeline falha se não baterem. Ele roda
+fmt/clippy/test/doc, compila o binário `redmine` para Linux x86_64/ARM64
+(musl), macOS arm64/x86_64 e Windows x86_64/ARM64, e publica no GitHub Release
+os arquivos `redmine-<versão>-<target>.{tar.gz,zip}` + `sha256sums.txt`.
+
+Branches e PRs passam pelo `.github/workflows/ci.yml` (fmt, clippy, testes,
+docs e smoke em Windows/macOS).
+
 ## ⚠️ Limitações Conhecidas
 
 ### Sem suporte a OAuth

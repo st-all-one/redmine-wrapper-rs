@@ -135,6 +135,20 @@ crates/redmine-cli/ (bin `redmine`, publish = false)
 - Documentação de uso: `wiki/cli.md`. Testes de integração em
   `crates/redmine-cli/tests/cli_test.rs`.
 
+## Release
+
+O workflow `.github/workflows/release.yml` dispara em tags `vX.Y.Z` e valida
+que a tag (sem `v`) é igual às versões de `Cargo.toml` e
+`crates/redmine-cli/Cargo.toml`. Ele compila o binário `redmine` para Linux
+x86_64/ARM64 (musl), macOS arm64/x86_64 e Windows x86_64/ARM64, e publica
+`redmine-<versão>-<target>.{tar.gz,zip}` + `sha256sums.txt` no GitHub Release.
+O CI de branches/PRs fica em `.github/workflows/ci.yml`.
+
+```bash
+git tag v0.2.0
+git push origin v0.2.0
+```
+
 ## Convenções de código
 
 - MPL-2.0 header em todos os arquivos

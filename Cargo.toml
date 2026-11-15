@@ -78,6 +78,12 @@ default = ["rustls"]
 rustls = ["reqwest/rustls-tls"]
 native-tls = ["reqwest/native-tls"]
 
+# Perfil usado pelos binários de release (matriz do workflow `release.yml`).
+[profile.release]
+lto = "fat"
+codegen-units = 1
+strip = true
+
 [dependencies]
 reqwest = { version = "0.12", default-features = false, features = ["json"] }
 serde = { version = "1", features = ["derive"] }
