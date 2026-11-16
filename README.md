@@ -26,6 +26,37 @@
 
 ---
 
+## ⚡ Instalação rápida (CLI)
+
+```bash
+curl --proto '=https' --tlsv1.2 -sSf \
+  https://raw.githubusercontent.com/st-all-one/redmine-wrapper-rs/main/install.sh | bash
+```
+
+O instalador detecta Linux/macOS/Windows (x86_64 ou ARM64), baixa o binário do
+GitHub Release, confere o SHA-256 e instala em `~/.local/bin`. Para fixar a
+versão ou o diretório:
+
+```bash
+curl ... | REDMINE_VERSION=v0.2.1 bash
+curl ... | REDMINE_INSTALL_DIR=/usr/local/bin bash
+```
+
+Do repositório, `./install.sh --from-source` compila com
+`cargo build --release --locked -p redmine-cli`; `./install.sh --uninstall`
+move o binário para um lixo recuperável. Requer `curl`, `tar`/`unzip` e
+`sha256sum` (ou `shasum`).
+
+```bash
+export REDMINE_URL=https://redmine.example.com
+export REDMINE_TOKEN=seu-api-token
+redmine issues list --params '{"status_id":"open"}'
+```
+
+O contrato completo do CLI está em [`wiki/cli.md`](./wiki/cli.md).
+
+---
+
 ## 🚀 Quick-start
 
 ### Adicione ao `Cargo.toml`:
@@ -378,8 +409,8 @@ test result: ok. 31 passed; 0 failed
 O workflow `.github/workflows/release.yml` dispara em tags `vX.Y.Z`:
 
 ```bash
-git tag v0.2.0
-git push origin v0.2.0
+git tag v0.2.1
+git push origin v0.2.1
 ```
 
 Antes de taguear, as versões em `Cargo.toml` e `crates/redmine-cli/Cargo.toml`
@@ -387,6 +418,11 @@ devem ser iguais à tag (sem o `v`); o pipeline falha se não baterem. Ele roda
 fmt/clippy/test/doc, compila o binário `redmine` para Linux x86_64/ARM64
 (musl), macOS arm64/x86_64 e Windows x86_64/ARM64, e publica no GitHub Release
 os arquivos `redmine-<versão>-<target>.{tar.gz,zip}` + `sha256sums.txt`.
+
+Faça push do commit que contém `.github/workflows/release.yml` **antes** de
+criar a tag e aguarde o CI iniciar (o GitHub precisa registrar o workflow). Se
+a tag tiver sido enviada sem run, use **Actions → Release → Run workflow** e
+informe `tag=v0.2.1` — o `workflow_dispatch` publica quando recebe uma tag.
 
 Branches e PRs passam pelo `.github/workflows/ci.yml` (fmt, clippy, testes,
 docs e smoke em Windows/macOS).

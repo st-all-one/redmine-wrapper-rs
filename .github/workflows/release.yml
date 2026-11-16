@@ -11,6 +11,10 @@
 #
 # O nome do asset é `redmine-<versão>-<target>.{tar.gz,zip}`; o binário dentro
 # do arquivo é `redmine` (ou `redmine.exe` no Windows).
+#
+# Importante: faça push do commit que adiciona/atualiza este workflow ANTES de
+# criar a tag e aguarde o CI iniciar; o GitHub só dispara o evento de tag se já
+# conhece o workflow. Se a tag não disparar, use workflow_dispatch com `tag=vX.Y.Z`.
 
 name: Release
 
@@ -18,9 +22,15 @@ on:
   push:
     tags: ["v*"]
   workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag existente para publicar (ex.: v0.2.1); vazio = apenas build"
+        required: false
+        type: string
 
 concurrency:
-  group: release-${{ github.ref }}
+  # Tag push e workflow_dispatch com a mesma tag compartilham o grupo.
+  group: release-${{ github.event.inputs.tag || github.ref_name }}
   cancel-in-progress: false
 
 env:
@@ -37,6 +47,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref }}
 
       - uses: dtolnay/rust-toolchain@master
         with:
@@ -54,13 +66,19 @@ jobs:
           cargo doc --workspace --no-deps --locked
 
       - name: Tag == versões do workspace
+        env:
+          RELEASE_TAG: ${{ github.event.inputs.tag }}
         run: |
           set -euo pipefail
-          if [[ "${GITHUB_REF_TYPE}" != "tag" ]]; then
-            echo "workflow_dispatch em '${GITHUB_REF_NAME}': pulando verificação de tag."
+          tag_ref="${RELEASE_TAG:-}"
+          if [[ -z "${tag_ref}" && "${GITHUB_REF_TYPE}" == "tag" ]]; then
+            tag_ref="${GITHUB_REF_NAME}"
+          fi
+          if [[ -z "${tag_ref}" ]]; then
+            echo "workflow_dispatch sem tag: apenas build (sem release)."
             exit 0
           fi
-          tag="${GITHUB_REF_NAME#v}"
+          tag="${tag_ref#v}"
           lib="$(grep -m1 -E '^version = "[0-9]' Cargo.toml | cut -d'"' -f2)"
           cli="$(grep -m1 -E '^version = "[0-9]' crates/redmine-cli/Cargo.toml | cut -d'"' -f2)"
           echo "tag=v${tag}  lib=${lib}  cli=${cli}"
@@ -103,6 +121,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref }}
 
       - uses: dtolnay/rust-toolchain@master
         with:
@@ -164,14 +184,15 @@ jobs:
         with:
           name: redmine-${{ matrix.target }}
           path: dist/*.${{ matrix.archive }}
+          if-no-files-found: error
           retention-days: 1
 
   # Publica o Release: reúne os artefatos, gera os checksums e anexa tudo.
   release:
     name: publicar
     needs: build
-    # Só publica quando o gatilho é uma tag; `workflow_dispatch` em branch apenas compila.
-    if: startsWith(github.ref, 'refs/tags/')
+    # Publica quando o gatilho é uma tag; workflow_dispatch só publica se receber `tag`.
+    if: startsWith(github.ref, 'refs/tags/') || (github.event_name == 'workflow_dispatch' && github.event.inputs.tag != '')
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -191,6 +212,7 @@ jobs:
       - name: GitHub Release
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ github.event.inputs.tag || github.ref_name }}
           files: |
             dist/*.tar.gz
             dist/*.zip

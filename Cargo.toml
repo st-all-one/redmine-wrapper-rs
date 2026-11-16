@@ -60,7 +60,7 @@ assert_is_empty = "allow"
 
 [package]
 name = "redmine-wrapper-rs"
-version = "0.2.0"
+version = "0.2.1"
 edition = "2024"
 # MSRV é contrato: casa com rust-toolchain.toml e clippy.toml::msrv.
 rust-version = "1.100"

@@ -996,7 +996,7 @@ dependencies = [
 
 [[package]]
 name = "redmine-cli"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "clap",
  "percent-encoding",
@@ -1009,7 +1009,7 @@ dependencies = [
 
 [[package]]
 name = "redmine-wrapper-rs"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "reqwest",
  "serde",

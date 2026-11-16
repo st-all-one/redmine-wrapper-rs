@@ -6,11 +6,47 @@ pensada para consultas rápidas, scripts e lotes.
 
 O binário fica no crate `crates/redmine-cli` e não é publicado no crates.io.
 
+## Instalação
+
+### Release (recomendado)
+
 ```bash
-cargo build --release -p redmine-cli
+curl --proto '=https' --tlsv1.2 -sSf \
+  https://raw.githubusercontent.com/st-all-one/redmine-wrapper-rs/main/install.sh | bash
+```
+
+O instalador detecta o SO/arquitetura, baixa
+`redmine-<versão>-<target>.{tar.gz,zip}` do GitHub Release, verifica o
+`sha256sums.txt` e instala em `~/.local/bin`.
+
+```bash
+# versão específica e diretório alternativo
+curl ... | REDMINE_VERSION=v0.2.1 bash
+curl ... | REDMINE_INSTALL_DIR=/usr/local/bin bash
+```
+
+### A partir do source
+
+```bash
+./install.sh --from-source
+# equivalente a:
+cargo build --release --locked -p redmine-cli
+```
+
+### Desinstalar
+
+```bash
+./install.sh --uninstall
+```
+
+O binário anterior é movido para `${XDG_CACHE_HOME:-~/.cache}/redmine/trash`
+(nada é apagado de forma irreversível). O instalador usa `REDMINE_*` para
+configuração; não confunda com `REDMINE_URL`/`REDMINE_TOKEN` do CLI.
+
+```bash
 export REDMINE_URL=https://redmine.example.com
 export REDMINE_TOKEN=seu-api-token
-target/release/redmine issues list --params '{"status_id":"open"}'
+redmine issues list --params '{"status_id":"open"}'
 ```
 
 ---

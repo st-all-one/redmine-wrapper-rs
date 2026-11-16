@@ -144,9 +144,13 @@ x86_64/ARM64 (musl), macOS arm64/x86_64 e Windows x86_64/ARM64, e publica
 `redmine-<versão>-<target>.{tar.gz,zip}` + `sha256sums.txt` no GitHub Release.
 O CI de branches/PRs fica em `.github/workflows/ci.yml`.
 
+Faça push do commit que contém o workflow **antes** de criar a tag e aguarde o
+CI iniciar. Se a tag tiver sido enviada sem run, rode o workflow manualmente
+com `tag=vX.Y.Z`; esse caminho faz checkout da tag e publica o Release.
+
 ```bash
-git tag v0.2.0
-git push origin v0.2.0
+git tag v0.2.1
+git push origin v0.2.1
 ```
 
 ## Convenções de código
